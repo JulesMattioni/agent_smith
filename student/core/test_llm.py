@@ -77,7 +77,7 @@ def main():
     try:
         print("\n=== Testing Groq Client ===")
         client = OpenRouterClient(
-            model_name="qwen/qwen3-32b",
+            model_name="llama-3.3-70b-versatile",
             provider_name="groq",
             base_url="https://api.groq.com/openai/v1",
         )
