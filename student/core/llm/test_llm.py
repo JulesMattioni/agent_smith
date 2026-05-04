@@ -6,7 +6,7 @@ def main():
     dotenv.load_dotenv()
 
     client = OpenRouterClient(
-        model_name="google/gemma-4-31b-it:free",
+        model_name="google/gemma-4-26b-a4b-it:free",
         base_url="https://openrouter.ai/api/v1",
         provider_name="openrouter",
     )
@@ -17,4 +17,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(e)

@@ -18,30 +18,30 @@ class BaseClient(ABC):
 
 class OpenRouterClient(BaseClient):
     def __init__(self, model_name: str, base_url: str, provider_name: str):
-        self.provider_name = provider_name
-        self.key_manager = KeyManager(self.provider_name)
-        self.model_name = model_name
-        self.base_url = base_url
+        self.__provider_name = provider_name
+        self.__key_manager = KeyManager(self.__provider_name)
+        self.__model_name = model_name
+        self.__base_url = base_url
 
     def generate(
         self, messages: list[dict], stop_sequences: list[str] = None
     ) -> LlmResponse:
 
-        max_attempts = len(self.key_manager.key_count())
+        max_attempts = self.__key_manager.key_count * 2
         attempts = 0
 
         while attempts < max_attempts:
-            payload = {"messages": messages, "model": self.model_name}
+            payload = {"messages": messages, "model": self.__model_name}
             if stop_sequences:
                 payload["stop"] = stop_sequences
             headers = {
-                "Authorization": f"Bearer {self.key_manager.current_key}",
+                "Authorization": f"Bearer {self.__key_manager.current_key}",
                 "Content-Type": "application/json",
             }
 
             start_time = time.time()
             response = requests.post(
-                url=f"{self.base_url}/chat/completions",
+                url=f"{self.__base_url}/chat/completions",
                 headers=headers,
                 data=json.dumps(payload),
             )
@@ -52,7 +52,7 @@ class OpenRouterClient(BaseClient):
                     f"Error {response.status_code}, trying next API key...",
                     file=sys.stderr,
                 )
-                self.key_manager.rotate_key()
+                self.__key_manager.rotate_key()
                 attempts += 1
             elif response.status_code == 200:
 
@@ -66,7 +66,8 @@ class OpenRouterClient(BaseClient):
                         output_tokens=usage["completion_tokens"],
                         content=content,
                         request_time_ms=elapsed_time,
-                        model_name=self.model_name,
+                        model_name=self.__model_name,
+                        attempts=attempts,
                     )
                 except ValidationError as e:
                     raise ValueError(f"Error in response format: {e}")
@@ -76,4 +77,6 @@ class OpenRouterClient(BaseClient):
             else:
                 raise ValueError(f"Unknown error {response.status_code}")
 
+        if response.status_code == 429:
+            raise ValueError(f"All API keys rate limit used.")
         raise ValueError(f"No valid API key.")
