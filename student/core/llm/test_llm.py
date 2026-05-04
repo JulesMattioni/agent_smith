@@ -1,18 +1,25 @@
 import dotenv
-from clients import OpenRouterClient
+from clients import OpenRouterClient, GoogleClient
 
 
 def main():
     dotenv.load_dotenv()
-
-    client = OpenRouterClient(
-        model_name="google/gemma-4-26b-a4b-it:free",
-        base_url="https://openrouter.ai/api/v1",
-        provider_name="openrouter",
-    )
-
     messages = [{"role": "user", "content": "Say hello"}]
-    response = client.generate(messages)
+
+    # print("=== Testing OpenRouterClient ===")
+    # client = OpenRouterClient(
+    #     model_name="nousresearch/hermes-3-llama-3.1-405b:free",
+    #     provider_name="openrouter",
+    # )
+    # response = client.generate(messages)
+    # print(response)
+
+    print("=== Testing GoogleClient ===")
+    google = GoogleClient(
+        model_name="models/gemini-2.0-flash-lite",
+        provider_name="google"
+    )
+    response = google.generate(messages)
     print(response)
 
 
