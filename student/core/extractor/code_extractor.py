@@ -33,7 +33,7 @@ class CodeExtractor:
         func_name = res.group(1)
         inner = res.group(2)
         params = re.findall(r'<parameter name="(\w+)">(.*?)</parameter>', inner, re.DOTALL)
-        args = ", ".join(f'{name}={self._format_value(value)}' for name, value in params)
+        args = ", ".join(f'{name}={CodeExtractor._format_value(value)}' for name, value in params)
         return f'result = {func_name}({args})'
 
     @staticmethod
