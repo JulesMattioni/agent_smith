@@ -27,7 +27,14 @@ class CodeExtractor:
 
     @staticmethod
     def _extract_xml_tool_call(text: str) -> str | None:
-        pass
+        res = re.search(r'<invoke name="(\w+)">(.*?)</invoke>', text, re.DOTALL)
+        if not res:
+            return None
+        func_name = res.group(1)
+        inner = res.group(2)
+        params = re.findall(r'<parameter name="(\w+)">(.*?)</parameter>', inner, re.DOTALL)
+        args = ", ".join(f'{name}={self._format_value(value)}' for name, value in params)
+        return f'result = {func_name}({args})'
 
     @staticmethod
     def _extract_json_tool_call(text: str) -> str | None:
@@ -36,3 +43,14 @@ class CodeExtractor:
     @staticmethod
     def _extract_react_format(text: str) -> str | None:
         pass
+
+    @staticmethod
+    def _format_value(value: str) -> str:
+        value = value.strip()
+        if value.lstrip('-').isdigit():
+            return value
+        try: 
+            float(value)
+            return value
+        except ValueError:
+            return f'"{value}"'
