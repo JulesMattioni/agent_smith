@@ -5,16 +5,16 @@ from extractor.code_extractor import CodeExtractor
 
 def main():
     dotenv.load_dotenv()
-    # messages = [
-    #     {
-    #         "role": "system",
-    #         "content": "You are a Python expert. Always respond with your solution inside a ```python code block.",
-    #     },
-    #     {
-    #         "role": "user",
-    #         "content": "Write a Python function called count_vowels that takes a string and returns the number of vowels (a,e,i,o,u), case insensitive.",
-    #     },
-    # ]
+    messages = [
+        {
+            "role": "system",
+            "content": "You are a Python expert. Always respond with your solution inside a ```python code block.",
+        },
+        {
+            "role": "user",
+            "content": "Write a Python function called count_vowels that takes a string and returns the number of vowels (a,e,i,o,u), case insensitive.",
+        },
+    ]
 
     # messages = [
     #     {
@@ -47,20 +47,20 @@ def main():
     #     },
     # ]
 
-    messages = [
-        {
-            "role": "system",
-            "content": """You are a coding assistant. You must respond using this exact format:
-    Action: function_name
-    Action Input: {"param1": "value1", "param2": value2}
+    # messages = [
+    #     {
+    #         "role": "system",
+    #         "content": """You are a coding assistant. You must respond using this exact format:
+    # Action: function_name
+    # Action Input: {"param1": "value1", "param2": value2}
 
-    Do not write any Python code blocks. Only use the format above.""",
-        },
-        {
-            "role": "user",
-            "content": "Call the read_file function with filepath='/testbed/file.py', start_line=1 and end_line=50",
-        },
-    ]
+    # Do not write any Python code blocks. Only use the format above.""",
+    #     },
+    #     {
+    #         "role": "user",
+    #         "content": "Call the read_file function with filepath='/testbed/file.py', start_line=1 and end_line=50",
+    #     },
+    # ]
 
     # try:
     #     print("=== Testing OpenRouterClient ===")
