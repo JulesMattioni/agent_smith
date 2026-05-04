@@ -1,6 +1,6 @@
 import dotenv
-from llm.clients import OpenRouterClient
-from extractor.code_extractor import CodeExtractor
+from core.llm.clients import OpenRouterClient
+from core.agent.agent import Agent
 
 
 def main():
@@ -75,14 +75,14 @@ def main():
     #     print(e)
 
     try:
-        print("\n=== Testing Groq Client ===")
+        print("\n=== Testing Groq Agent ===")
         client = OpenRouterClient(
-            model_name="llama-3.3-70b-versatile",
+            model_name="qwen/qwen3-32b",
             provider_name="groq",
             base_url="https://api.groq.com/openai/v1",
         )
-        response = client.generate(messages)
-        print(CodeExtractor.extract(response.content))
+        agent = Agent(client, 1)
+        print(agent.run(messages[1]["content"], messages[0]["content"]))
     except Exception as e:
         print(e)
 
