@@ -1,66 +1,12 @@
 import dotenv
 from core.llm.clients import OpenRouterClient
 from core.agent.agent import Agent
+from core.sandbox.sandbox import Sandbox
+from core.sandbox.config import SandboxConfig
 
 
 def main():
     dotenv.load_dotenv()
-    messages = [
-        {
-            "role": "system",
-            "content": "You are a Python expert. Always respond with your solution inside a ```python code block.",
-        },
-        {
-            "role": "user",
-            "content": "Write a Python function called count_vowels that takes a string and returns the number of vowels (a,e,i,o,u), case insensitive.",
-        },
-    ]
-
-    # messages = [
-    #     {
-    #         "role": "system",
-    #         "content": """You are a coding assistant. You must respond using XML tool calls in this exact format:
-    # <invoke name="function_name">
-    # <parameter name="param1">value1</parameter>
-    # <parameter name="param2">value2</parameter>
-    # </invoke>
-
-    # Do not write any Python code blocks. Only use the XML format above.""",
-    #     },
-    #     {
-    #         "role": "user",
-    #         "content": "Call the read_file function with filepath='/testbed/file.py' and start_line=1 and end_line=50",
-    #     },
-    # ]
-
-    # messages = [
-    #     {
-    #         "role": "system",
-    #         "content": """You are a coding assistant. You must respond using this exact format:
-    # <tool_call>{"name": "function_name", "arguments": {"param1": "value1", "param2": value2}}</tool_call>
-
-    # Do not write any Python code blocks. Only use the format above.""",
-    #     },
-    #     {
-    #         "role": "user",
-    #         "content": "Call the read_file function with filepath='/testbed/file.py', start_line=1 and end_line=50",
-    #     },
-    # ]
-
-    # messages = [
-    #     {
-    #         "role": "system",
-    #         "content": """You are a coding assistant. You must respond using this exact format:
-    # Action: function_name
-    # Action Input: {"param1": "value1", "param2": value2}
-
-    # Do not write any Python code blocks. Only use the format above.""",
-    #     },
-    #     {
-    #         "role": "user",
-    #         "content": "Call the read_file function with filepath='/testbed/file.py', start_line=1 and end_line=50",
-    #     },
-    # ]
 
     # try:
     #     print("=== Testing OpenRouterClient ===")
@@ -74,6 +20,17 @@ def main():
     # except Exception as e:
     #     print(e)
 
+    system_prompt = """You are an autonomous coding agent. 
+To solve the user's task, you must write Python code inside a ```python code block.
+This code will be executed in a sandbox, and you will receive the standard output (Observation).
+You can use `print()` to observe variables and results.
+Once you have the final answer, call the function `final_answer("your result")`."""
+
+    task = """Write a python script that does the following:
+1. Import the 'os' module.
+2. Print the current working directory using os.getcwd().
+3. Call final_answer() with the result."""
+
     try:
         print("\n=== Testing Groq Agent ===")
         client = OpenRouterClient(
@@ -81,8 +38,10 @@ def main():
             provider_name="groq",
             base_url="https://api.groq.com/openai/v1",
         )
-        agent = Agent(client, 1)
-        print(agent.run(messages[1]["content"], messages[0]["content"]))
+        config = SandboxConfig(max_execution_time_seconds=5)
+        sandbox = Sandbox(config)
+        agent = Agent(client, sandbox, 3)
+        print(agent.run(task, system_prompt))
     except Exception as e:
         print(e)
 
