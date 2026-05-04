@@ -38,11 +38,32 @@ class CodeExtractor:
 
     @staticmethod
     def _extract_json_tool_call(text: str) -> str | None:
-        pass
+        res = re.search(r'<tool_call>(.*?)</tool_call>', text, re.DOTALL)
+        if not res:
+            return None
+        try:
+            data = json.loads(res.group(1).strip())
+        except json.JSONDecodeError:
+            return None
+        func_name = data["name"]
+        arguments = data["arguments"]
+        args = ", ".join(f'{k}={CodeExtractor._format_value(str(v))}' for k, v in arguments.items())
+        return f'result = {func_name}({args})'
 
     @staticmethod
     def _extract_react_format(text: str) -> str | None:
-        pass
+        action_res = re.search(r'Action:\s*(\w+)', text)
+        input_res = re.search(r'Action Input:\s*(\{.*?\})', text, re.DOTALL)
+        if not action_res or not input_res:
+            return None
+        func_name = action_res.group(1)
+        try:
+            arguments = json.loads(input_res.group(1))
+        except json.JSONDecodeError:
+            return None
+        args = ", ".join(f'{k}={CodeExtractor._format_value(str(v))}' for k, v in arguments.items())
+        
+        return f'result = {func_name}({args})'
 
     @staticmethod
     def _format_value(value: str) -> str:

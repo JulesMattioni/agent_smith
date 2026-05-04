@@ -16,20 +16,49 @@ def main():
     #     },
     # ]
 
+    # messages = [
+    #     {
+    #         "role": "system",
+    #         "content": """You are a coding assistant. You must respond using XML tool calls in this exact format:
+    # <invoke name="function_name">
+    # <parameter name="param1">value1</parameter>
+    # <parameter name="param2">value2</parameter>
+    # </invoke>
+
+    # Do not write any Python code blocks. Only use the XML format above.""",
+    #     },
+    #     {
+    #         "role": "user",
+    #         "content": "Call the read_file function with filepath='/testbed/file.py' and start_line=1 and end_line=50",
+    #     },
+    # ]
+
+    # messages = [
+    #     {
+    #         "role": "system",
+    #         "content": """You are a coding assistant. You must respond using this exact format:
+    # <tool_call>{"name": "function_name", "arguments": {"param1": "value1", "param2": value2}}</tool_call>
+
+    # Do not write any Python code blocks. Only use the format above.""",
+    #     },
+    #     {
+    #         "role": "user",
+    #         "content": "Call the read_file function with filepath='/testbed/file.py', start_line=1 and end_line=50",
+    #     },
+    # ]
+
     messages = [
         {
             "role": "system",
-            "content": """You are a coding assistant. You must respond using XML tool calls in this exact format:
-    <invoke name="function_name">
-    <parameter name="param1">value1</parameter>
-    <parameter name="param2">value2</parameter>
-    </invoke>
+            "content": """You are a coding assistant. You must respond using this exact format:
+    Action: function_name
+    Action Input: {"param1": "value1", "param2": value2}
 
-    Do not write any Python code blocks. Only use the XML format above.""",
+    Do not write any Python code blocks. Only use the format above.""",
         },
         {
             "role": "user",
-            "content": "Call the read_file function with filepath='/testbed/file.py' and start_line=1 and end_line=50",
+            "content": "Call the read_file function with filepath='/testbed/file.py', start_line=1 and end_line=50",
         },
     ]
 
