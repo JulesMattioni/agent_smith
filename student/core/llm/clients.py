@@ -23,7 +23,9 @@ class BaseClient(ABC):
 
 
 class OpenRouterClient(BaseClient):
-    def __init__(self, model_name: str, provider_name: str, base_url: str) -> None:
+    def __init__(
+        self, model_name: str, provider_name: str, base_url: str
+    ) -> None:
         super().__init__(model_name, provider_name, base_url)
 
     def generate(
@@ -82,6 +84,5 @@ class OpenRouterClient(BaseClient):
                 raise ValueError(f"Unknown error {response.status_code}")
 
         if response.status_code == 429:
-            raise ValueError(f"All API keys rate limit used.")
-        raise ValueError(f"No valid API key.")
-
+            raise ValueError("All API keys rate limit used.")
+        raise ValueError("No valid API key.")
