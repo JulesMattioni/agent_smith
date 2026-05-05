@@ -26,10 +26,21 @@ This code will be executed in a sandbox, and you will receive the standard outpu
 You can use `print()` to observe variables and results.
 Once you have the final answer, call the function `final_answer("your result")`."""
 
-    task = """Write a python script that does the following:
+    wrong_import_task = """Write a python script that does the following:
 1. Import the 'os' module.
 2. Print the current working directory using os.getcwd().
 3. Call final_answer() with the result."""
+
+    wrong_dir_task = """Write a python script that does the following:
+1. Open the file '/etc/passwd' and print its contents.
+2. Call final_answer() with the contents."""
+
+    wrong_network_task = """Write a python script that does the following:
+1. Import socket and connect to 'google.com' on port 80.
+2. Print 'connected!'.
+3. Call final_answer() with 'connected!'."""
+
+    task = "Write a python script that calculates the sum of 145 and 283, prints it, and then calls final_answer() with the result."
 
     try:
         print("\n=== Testing Groq Agent ===")
@@ -41,7 +52,7 @@ Once you have the final answer, call the function `final_answer("your result")`.
         config = SandboxConfig(max_execution_time_seconds=5)
         sandbox = Sandbox(config)
         agent = Agent(client, sandbox, 3)
-        print(agent.run(task, system_prompt))
+        print(agent.run(wrong_network_task, system_prompt))
     except Exception as e:
         print(e)
 
