@@ -59,7 +59,7 @@ class Agent:
             final_match = re.search(r"<<<FINAL_ANSWER:(.*?)>>>", observation, re.DOTALL)
             if final_match:
                 answer = final_match.group(1).strip()
-                print(f"DEBUG solution: repr={repr(answer)}")
+                print(extracted_code)
                 return SolutionOutput(
                     task_id=task_id,
                     benchmark=benchmark,
