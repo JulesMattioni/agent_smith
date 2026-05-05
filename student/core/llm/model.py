@@ -7,4 +7,4 @@ class LlmResponse(BaseModel):
     content: str
     request_time_ms: float
     model_name: str
-    attempts: int
+    attempts: int = 0

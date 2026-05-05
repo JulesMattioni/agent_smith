@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from .models import LlmResponse
+from .model import LlmResponse
 from .key_manager import KeyManager
 import requests
 import time

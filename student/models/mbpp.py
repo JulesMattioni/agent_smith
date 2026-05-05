@@ -5,6 +5,7 @@ from typing import Optional, List
 
 class MBPPTaskInput(BaseModel):
     """Input for MBPP task evaluation."""
+
     task_id: int
     task_definition: str
     function_definition: str
@@ -14,6 +15,7 @@ class MBPPTaskInput(BaseModel):
 
 class StepMetrics(BaseModel):
     """Metrics for a single agent step."""
+
     step: int
     input_tokens: int
     output_tokens: int
@@ -24,17 +26,17 @@ class StepMetrics(BaseModel):
     sandbox_input: str
     sandbox_output: str
     retries: int
-    timestamp: str = Field(default_factory=lambda: datetime.now().
-    isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.now().isoformat())
 
 
 class SolutionOutput(BaseModel):
     """Output from student solution - this is what students must
     produce."""
+
     task_id: str
-    benchmark: str # "mbpp" or "swebench"
+    benchmark: str  # "mbpp" or "swebench"
     success: bool
-    solution: str # Code for MBPP, patch for SWE-bench
+    solution: str  # Code for MBPP, patch for SWE-bench
     system_prompt: str
     iterations: int
     total_requests: int
@@ -43,5 +45,4 @@ class SolutionOutput(BaseModel):
     total_time_seconds: float
     steps: List["StepMetrics"] = Field(default_factory=list)
     error: Optional[str] = None
-    timestamp: str = Field(default_factory=lambda: datetime.now().
-    isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.now().isoformat())

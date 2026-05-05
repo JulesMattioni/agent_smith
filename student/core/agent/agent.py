@@ -5,18 +5,26 @@ from models.mbpp import StepMetrics, SolutionOutput
 import re
 import time
 
+
 class Agent:
-    def __init__(self, llm_client: BaseClient, sandbox: Sandbox, max_iterations: int = 10):
+    def __init__(
+        self,
+        llm_client: BaseClient,
+        sandbox: Sandbox,
+        max_iterations: int = 10,
+    ):
         self.llm = llm_client
         self.sandbox = sandbox
         self.max_iterations = max_iterations
 
-    def run(self, task: str, system_prompt: str, task_id: str, benchmark: str) -> SolutionOutput:
+    def run(
+        self, task: str, system_prompt: str, task_id: str, benchmark: str
+    ) -> SolutionOutput:
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": task},
         ]
-        
+
         steps = []
         total_input_tokens = 0
         total_output_tokens = 0
@@ -31,7 +39,7 @@ class Agent:
             total_output_tokens += response.output_tokens
 
             extracted_code = CodeExtractor.extract(response.content)
-            
+
             if extracted_code is None:
                 observation = "Error: No code block found."
                 sandbox_input = ""
@@ -40,23 +48,29 @@ class Agent:
                 observation = self.sandbox.execute(extracted_code)
                 sandbox_input = extracted_code
 
-            steps.append(StepMetrics(
-                step=i + 1,
-                input_tokens=response.input_tokens,
-                output_tokens=response.output_tokens,
-                request_time_ms=response.request_time_ms,
-                api_url=self.llm.base_url,
-                model_name=self.llm.model_name,
-                llm_output=response.content,
-                sandbox_input=sandbox_input,
-                sandbox_output=observation,
-                retries=0,
-            ))
+            steps.append(
+                StepMetrics(
+                    step=i + 1,
+                    input_tokens=response.input_tokens,
+                    output_tokens=response.output_tokens,
+                    request_time_ms=response.request_time_ms,
+                    api_url=self.llm.base_url,
+                    model_name=self.llm.model_name,
+                    llm_output=response.content,
+                    sandbox_input=sandbox_input,
+                    sandbox_output=observation,
+                    retries=response.attempts,
+                )
+            )
 
             messages.append({"role": "assistant", "content": response.content})
-            messages.append({"role": "user", "content": f"Observation: {observation}"})
+            messages.append(
+                {"role": "user", "content": f"Observation: {observation}"}
+            )
 
-            final_match = re.search(r"<<<FINAL_ANSWER:(.*?)>>>", observation, re.DOTALL)
+            final_match = re.search(
+                r"<<<FINAL_ANSWER:(.*?)>>>", observation, re.DOTALL
+            )
             if final_match:
                 answer = final_match.group(1).strip()
                 print(extracted_code)
