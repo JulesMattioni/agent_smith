@@ -81,6 +81,7 @@ class OpenRouterClient(BaseClient):
                 return res
 
             else:
+                print(f"DEBUG API ERROR 400: {response.text}")
                 raise ValueError(f"Unknown error {response.status_code}")
 
         if response.status_code == 429:
