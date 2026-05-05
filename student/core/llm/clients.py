@@ -12,8 +12,8 @@ class BaseClient(ABC):
     def __init__(self, model_name: str, provider_name: str, base_url: str):
         self.__provider_name = provider_name
         self._key_manager = KeyManager(self.__provider_name)
-        self._model_name = model_name
-        self._base_url = base_url
+        self.model_name = model_name
+        self.base_url = base_url
 
     @abstractmethod
     def generate(
@@ -36,7 +36,7 @@ class OpenRouterClient(BaseClient):
         attempts = 0
 
         while attempts < max_attempts:
-            payload = {"messages": messages, "model": self._model_name}
+            payload = {"messages": messages, "model": self.model_name}
             if stop_sequences:
                 payload["stop"] = stop_sequences
             headers = {
@@ -46,7 +46,7 @@ class OpenRouterClient(BaseClient):
 
             start_time = time.time()
             response = requests.post(
-                url=f"{self._base_url}/chat/completions",
+                url=f"{self.base_url}/chat/completions",
                 headers=headers,
                 data=json.dumps(payload),
             )
@@ -72,7 +72,7 @@ class OpenRouterClient(BaseClient):
                         output_tokens=usage["completion_tokens"],
                         content=content,
                         request_time_ms=elapsed_time,
-                        model_name=self._model_name,
+                        model_name=self.model_name,
                         attempts=attempts + 1,
                     )
                 except ValidationError as e:

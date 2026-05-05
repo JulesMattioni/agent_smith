@@ -17,6 +17,11 @@ import builtins
 import sys
 import socket
 import os
+import resource
+
+max_bytes = {self.config.max_memory_mb} * 1024 * 1024
+resource.setrlimit(resource.RLIMIT_AS, (max_bytes, max_bytes))
+
 
 _original_open = open
 _allowed_dirs = {self.config.allowed_directories}
@@ -44,6 +49,10 @@ def _safe_import(name, globals=None, locals=None, fromlist=(), level=0):
 
 builtins.__import__ = _safe_import
 
+_dangerous = ['eval', 'exec', 'compile', '__import__', 'breakpoint']
+for _name in _dangerous:
+    if hasattr(builtins, _name):
+        delattr(builtins, _name)
 
 def _blocked_socket(*args, **kwargs):
     raise PermissionError("Network access is not allowed.")
@@ -69,6 +78,8 @@ def final_answer(answer):
                 output = res.stdout
                 if res.stderr:
                     output += f"\nError: {res.stderr}"
+                if res.returncode == -9:
+                    output += "\nError: Memory limit exceeded."
 
                 return output if output else "Code executed with success!"
             except subprocess.TimeoutExpired:
