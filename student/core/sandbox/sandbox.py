@@ -8,83 +8,89 @@ from .config import SandboxConfig
 from ..mcp.client import MCPClient
 
 
-def isolated_worker(
-    code: str, child_conn, config_dict: dict, tool_names: list
-):
-    max_bytes = config_dict["max_memory_mb"] * 1024 * 1024
-    resource.setrlimit(resource.RLIMIT_AS, (max_bytes, max_bytes))
+class IsolatedWorker:
 
-    import builtins
-    _safe_exec = builtins.exec
+    @staticmethod
+    def run(code: str, child_conn, config_dict: dict, tool_names: list):
+        max_bytes = config_dict["max_memory_mb"] * 1024 * 1024
+        resource.setrlimit(resource.RLIMIT_AS, (max_bytes, max_bytes))
 
-    _original_open = builtins.open
+        import builtins
 
-    def _safe_open(file, mode="r", *args, **kwargs):
-        abs_path = os.path.abspath(str(file))
-        if not any(
-            abs_path.startswith(d) for d in config_dict["allowed_dirs"]
+        _safe_exec = builtins.exec
+
+        _original_open = builtins.open
+
+        def _safe_open(file, mode="r", *args, **kwargs):
+            abs_path = os.path.abspath(str(file))
+            if not any(
+                abs_path.startswith(d) for d in config_dict["allowed_dirs"]
+            ):
+                raise PermissionError(
+                    f"Access to '{abs_path}' is not allowed."
+                )
+            return _original_open(file, mode, *args, **kwargs)
+
+        builtins.open = _safe_open
+
+        _original_import = builtins.__import__
+
+        def _safe_import(
+            name, globals=None, locals=None, fromlist=(), level=0
         ):
-            raise PermissionError(f"Access to '{abs_path}' is not allowed.")
-        return _original_open(file, mode, *args, **kwargs)
+            base_name = name.split(".")[0]
+            if base_name not in config_dict["allowed_imports"]:
+                raise ImportError(f"Import '{name}' not allowed.")
+            return _original_import(name, globals, locals, fromlist, level)
 
-    builtins.open = _safe_open
+        builtins.__import__ = _safe_import
 
-    _original_import = builtins.__import__
+        def _blocked_socket(*args, **kwargs):
+            raise PermissionError("Network access is not allowed.")
 
-    def _safe_import(name, globals=None, locals=None, fromlist=(), level=0):
-        base_name = name.split(".")[0]
-        if base_name not in config_dict["allowed_imports"]:
-            raise ImportError(f"Import '{name}' not allowed.")
-        return _original_import(name, globals, locals, fromlist, level)
+        socket.socket = _blocked_socket
 
-    builtins.__import__ = _safe_import
+        for _name in ["eval", "exec", "compile"]:
+            if hasattr(builtins, _name):
+                delattr(builtins, _name)
 
-    def _blocked_socket(*args, **kwargs):
-        raise PermissionError("Network access is not allowed.")
+        exec_globals = {}
 
-    socket.socket = _blocked_socket
+        def make_tool_stub(tool_name):
+            def tool_stub(**kwargs):
+                child_conn.send(
+                    {"type": "CALL_TOOL", "name": tool_name, "args": kwargs}
+                )
+                response = child_conn.recv()
+                if response["status"] == "error":
+                    raise Exception(f"Tool error: {response['message']}")
+                return response["result"]
 
-    for _name in ["eval", "exec", "compile"]:
-        if hasattr(builtins, _name):
-            delattr(builtins, _name)
+            return tool_stub
 
-    exec_globals = {}
+        for name in tool_names:
+            exec_globals[name] = make_tool_stub(name)
 
-    def make_tool_stub(tool_name):
-        def tool_stub(**kwargs):
-            child_conn.send(
-                {"type": "CALL_TOOL", "name": tool_name, "args": kwargs}
-            )
-            response = child_conn.recv()
-            if response["status"] == "error":
-                raise Exception(f"Tool error: {response['message']}")
-            return response["result"]
+        def final_answer(answer):
+            child_conn.send({"type": "FINAL_ANSWER", "answer": answer})
+            sys.exit(0)
 
-        return tool_stub
+        exec_globals["final_answer"] = final_answer
 
-    for name in tool_names:
-        exec_globals[name] = make_tool_stub(name)
+        stdout_capture = io.StringIO()
+        sys.stdout = stdout_capture
+        sys.stderr = stdout_capture
 
-    def final_answer(answer):
-        child_conn.send({"type": "FINAL_ANSWER", "answer": answer})
-        sys.exit(0)
-
-    exec_globals["final_answer"] = final_answer
-
-    stdout_capture = io.StringIO()
-    sys.stdout = stdout_capture
-    sys.stderr = stdout_capture
-
-    try:
-        _safe_exec(code, exec_globals)
-        output = stdout_capture.getvalue()
-        child_conn.send({"type": "SUCCESS", "output": output})
-    except Exception as e:
-        output = stdout_capture.getvalue()
-        child_conn.send({"type": "ERROR", "output": output, "error": e})
-    finally:
-        sys.stdout = sys.__stdout__
-        sys.stderr = sys.__stderr__
+        try:
+            _safe_exec(code, exec_globals)
+            output = stdout_capture.getvalue()
+            child_conn.send({"type": "SUCCESS", "output": output})
+        except Exception as e:
+            output = stdout_capture.getvalue()
+            child_conn.send({"type": "ERROR", "output": output, "error": e})
+        finally:
+            sys.stdout = sys.__stdout__
+            sys.stderr = sys.__stderr__
 
 
 class Sandbox:
@@ -107,7 +113,7 @@ class Sandbox:
         parent_conn, child_conn = multiprocessing.Pipe()
 
         p = multiprocessing.Process(
-            target=isolated_worker,
+            target=IsolatedWorker.run,
             args=(code, child_conn, worker_config, self.tool_names),
         )
         p.start()

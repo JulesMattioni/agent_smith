@@ -7,6 +7,7 @@ from core.llm.clients import OpenRouterClient
 from core.sandbox.sandbox import Sandbox
 from core.sandbox.config import SandboxConfig
 from core.agent.agent import Agent
+from core.mcp.client import MCPClient
 
 
 class MBPPAgentCLI:
@@ -39,7 +40,7 @@ class MBPPAgentCLI:
             base_url=self.args.provider_url,
         )
         config = SandboxConfig(max_execution_time_seconds=5)
-        sandbox = Sandbox(config)
+        sandbox = Sandbox(config, MCPClient("mbpp"))
         agent = Agent(client, sandbox)
 
         task = f"""Solve the following Python programming task:
