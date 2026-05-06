@@ -1,11 +1,11 @@
 import dotenv
 import json
-from core.cli.base_agent import BaseAgentCLI
+from student.core.cli.base_agent import BaseAgentCLI
 from models.swebench import SWEBenchTaskInput
-from core.llm.clients import OpenRouterClient
-from core.sandbox.sandbox import Sandbox
-from core.sandbox.config import SandboxConfig
-from core.agent.agent import Agent
+from student.core.llm.clients import OpenRouterClient
+from student.core.sandbox.sandbox import Sandbox
+from student.core.sandbox.config import SandboxConfig
+from student.core.agent.agent import Agent
 
 
 class SWEBenchAgentCLI(BaseAgentCLI):

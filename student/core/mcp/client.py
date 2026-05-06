@@ -1,26 +1,39 @@
 import asyncio
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from mcp.client.streamable_http import streamable_http_client
 
 
 class MCPClient:
-    def __init__(self, command: str):
-        args = command.split()
-        self.params = StdioServerParameters(
-            command=args[0],
-            args=args[1:],
-        )
+    def __init__(self, command: str = None, url: str = None):
+        if command:
+            args = command.split()
+            self.params = StdioServerParameters(
+                command=args[0],
+                args=args[1:],
+            )
+            self.transport = "stdio"
+        elif url:
+            self.url = url
+            self.transport = "http"
+        else:
+            raise ValueError("Either command or url must be provided")
+
         self.session = None
         self._loop = asyncio.new_event_loop()
         self._tools = {}
 
     async def _connect_async(self):
-        self._stdio_ctx = stdio_client(self.params)
-        self._read, self._write = await self._stdio_ctx.__aenter__()
+        if self.transport == "stdio":
+            self._stdio_ctx = stdio_client(self.params)
+            self._read, self._write = await self._stdio_ctx.__aenter__()
+            self._session_ctx = ClientSession(self._read, self._write)
+        elif self.transport == "http":
+            self._stdio_ctx = streamable_http_client(self.url)
+            self._read, self._write, _ = await self._stdio_ctx.__aenter__()
+            self._session_ctx = ClientSession(self._read, self._write)
 
-        self._session_ctx = ClientSession(self._read, self._write)
         self.session = await self._session_ctx.__aenter__()
-
         await self.session.initialize()
 
         tools_res = await self.session.list_tools()
@@ -58,8 +71,12 @@ class MCPClient:
             await self._stdio_ctx.__aexit__(None, None, None)
 
     def disconnect(self):
-        self._loop.run_until_complete(self._disconnect_async())
-        self._loop.close()
+        try:
+            self._loop.run_until_complete(self._disconnect_async())
+        except Exception:
+            pass
+        finally:
+            self._loop.close()
 
     def get_man(self) -> str:
         man = "=== MCP TOOLS AVAILABLE ===\n"

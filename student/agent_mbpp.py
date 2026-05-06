@@ -1,12 +1,12 @@
 import json
 import dotenv
 from models.mbpp import MBPPTaskInput
-from core.llm.clients import OpenRouterClient
-from core.sandbox.sandbox import Sandbox
-from core.sandbox.config import SandboxConfig
-from core.agent.agent import Agent
-from core.mcp.client import MCPClient
-from core.cli.base_agent import BaseAgentCLI
+from student.core.llm.clients import OpenRouterClient
+from student.core.sandbox.sandbox import Sandbox
+from student.core.sandbox.config import SandboxConfig
+from student.core.agent.agent import Agent
+from student.core.mcp.client import MCPClient
+from student.core.cli.base_agent import BaseAgentCLI
 
 
 class MBPPAgentCLI(BaseAgentCLI):
@@ -16,13 +16,17 @@ class MBPPAgentCLI(BaseAgentCLI):
 
     def run(self):
         task_input = self._load_task()
+
+        mcp_client = MCPClient(command="python mcp_tools_mbpp.py")
+        mcp_client.connect()
+
         client = OpenRouterClient(
             model_name=self.args.model_name,
             provider_name="groq",
             base_url=self.args.provider_url,
         )
         config = SandboxConfig(max_execution_time_seconds=10)
-        sandbox = Sandbox(config, MCPClient("mbpp"))
+        sandbox = Sandbox(config, mcp_client)
         agent = Agent(client, sandbox)
 
         task = f"""Solve the following Python programming task:
@@ -48,14 +52,18 @@ final_answer(\"\"\"def {task_input.function_definition.split('(')[0].replace('de
 """
 
         system_prompt = f"""You are an autonomous coding agent.
-To solve the user's task, you must write Python code inside a ```python code block.
-This code will be executed in a sandbox, and you will receive the standard output (Observation).
+To solve the user's task, you must write Python code inside a
+```python code block.
+This code will be executed in a sandbox, and you will receive the standard
+output (Observation).
 You can use `print()` to observe variables and results.
-Once you have the final answer, call the function `final_answer("your result")`.
+Once you have the final answer,
+call the function `final_answer("your result")`.
 
-{sandbox.mcp_client.get_man()}
+{mcp_client.get_man()}
 
-IMPORTANT: Be concise. Write minimal code without docstrings, comments, or unnecessary validations."""
+IMPORTANT: Be concise. Write minimal code without docstrings, comments,
+or unnecessary validations."""
 
         res = agent.run(
             task=task,

@@ -10,3 +10,18 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "requests>=2.33.1",
 ]
+
+[project.scripts]
+sandbox = "student.sandbox_cli:main"
+agent_mbpp = "student.agent_mbpp:main"
+agent_swebench = "student.agent_swebench:main"
+
+[tool.uv]
+package = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["student"]

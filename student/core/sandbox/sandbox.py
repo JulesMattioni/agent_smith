@@ -87,7 +87,7 @@ class IsolatedWorker:
             child_conn.send({"type": "SUCCESS", "output": output})
         except Exception as e:
             output = stdout_capture.getvalue()
-            child_conn.send({"type": "ERROR", "output": output, "error": e})
+            child_conn.send({"type": "ERROR", "output": output, "error": str(e)})
         finally:
             sys.stdout = sys.__stdout__
             sys.stderr = sys.__stderr__
@@ -117,6 +117,8 @@ class Sandbox:
             args=(code, child_conn, worker_config, self.tool_names),
         )
         p.start()
+
+        child_conn.close()
 
         output_log = ""
         timeout = self.config.max_execution_time_seconds

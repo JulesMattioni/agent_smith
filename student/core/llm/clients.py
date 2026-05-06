@@ -36,7 +36,11 @@ class OpenRouterClient(BaseClient):
         attempts = 0
 
         while attempts < max_attempts:
-            payload = {"messages": messages, "model": self.model_name}
+            payload = {
+                "messages": messages,
+                "model": self.model_name,
+                "tool_choice": "none",
+            }
             if stop_sequences:
                 payload["stop"] = stop_sequences
             headers = {
