@@ -6,7 +6,6 @@ from core.llm.clients import OpenRouterClient
 from core.sandbox.sandbox import Sandbox
 from core.sandbox.config import SandboxConfig
 from core.agent.agent import Agent
-# from core.mcp.client import MCPClient
 
 
 class SWEBenchAgentCLI(BaseAgentCLI):
@@ -18,7 +17,6 @@ class SWEBenchAgentCLI(BaseAgentCLI):
     def run(self):
         task_input = self._load_task()
 
-        # Configuration spécifique SWE-bench
         client = OpenRouterClient(
             model_name=self.args.model_name,
             provider_name="groq",
