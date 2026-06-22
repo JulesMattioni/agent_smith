@@ -1,17 +1,83 @@
 from mcp.server.fastmcp import FastMCP
 import os
-import glob
+import subprocess
+import shlex
 
 
 class SWEBenchTools:
+    TESTBED = "/testbed"
+
     def __init__(self):
         self.mcp = FastMCP("swebench-tools")
+
+        self._docker_image = os.getenv("SWE_DOCKER_IMAGE")
+        if not self._docker_image:
+            raise ValueError("SWE_DOCKER_IMAGE missing.")
+        self._eval_script = os.getenv("SWE_EVAL_SCRIPT")
+        if not self._eval_script:
+            raise ValueError("SWE_EVAL_SCRIPT missing.")
+        self._container_id: str | None = None
+
         self._register_tools()
+
+    # Utils
 
     def _register_tools(self):
         self.mcp.tool()(self.read_file)
         self.mcp.tool()(self.edit_file)
         self.mcp.tool()(self.list_files)
+        self.mcp.tool()(self.search_code)
+        self.mcp.tool()(self.search_function_or_class_definition_in_code)
+        self.mcp.tool()(self.find_references)
+        self.mcp.tool()(self.run_command)
+        self.mcp.tool()(self.get_patch)
+        self.mcp.tool()(self.run_tests)
+
+    def _start_container(self) -> None:
+        if self._container_id:
+            return
+        res = subprocess.run(
+            ["docker", "run", "-d", self._docker_image, "sleep", "infinity"],
+            capture_output=True,
+            text=True,
+        )
+        if res.returncode != 0:
+            raise RuntimeError(f"Docker failed: {res.stderr.strip()}")
+        self._container_id = res.stdout.strip()
+
+    def _exec(
+        self,
+        command: str,
+        workdir: str = TESTBED,
+        timeout: int = 300,
+        input_data: str | None = None,
+    ) -> dict:
+        self._start_container()
+        cmd = ["docker", "exec", "-w", workdir]
+        if input_data is not None:
+            cmd.append("-i")
+        cmd += [self._container_id, "bash", "-c", command]
+        try:
+            res = subprocess.run(
+                cmd,
+                input=input_data,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
+            return {
+                "stdout": res.stdout,
+                "stderr": res.stderr,
+                "exit_code": res.returncode,
+            }
+        except subprocess.TimeoutExpired:
+            return {
+                "stdout": "",
+                "stderr": "Command timed out",
+                "exit_code": -1,
+            }
+
+    # File System Tools
 
     def read_file(
         self,
@@ -32,34 +98,15 @@ class SWEBenchTools:
         Returns:
             The file content formatted as '<line_number>: <line_content>'.
         """
-        try:
-            with open(filepath, "r", encoding="utf-8") as f:
-                lines = f.readlines()
-
-            total_lines = len(lines)
-
-            start_idx = max(0, start_line - 1) if start_line is not None else 0
-            end_idx = (
-                end_line
-                if end_line is not None and end_line != -1
-                else total_lines
-            )
-
-            end_idx = min(end_idx, total_lines)
-
-            output = []
-            for i in range(start_idx, end_idx):
-                output.append(f"{i + 1}: {lines[i].rstrip(-1)}")
-
-            if not output:
-                return "Error: No lines found in the specified range."
-
-            return "\n".join(output)
-
-        except FileNotFoundError:
-            return f"Error: File '{filepath}' not found."
-        except Exception as e:
-            return f"Error reading file: {str(e)}"
+        out = self._exec(f"cat {shlex.quote(filepath)}")
+        if out["exit_code"] != 0:
+            return f"Error: {out['stderr'].strip()}"
+        lines = out["stdout"].splitlines()
+        total = len(lines)
+        start_idx = max(0, start_line - 1)
+        end_idx = total if end_line == -1 else min(end_line, total)
+        chunk = [f"{i + 1}: {lines[i]}" for i in range(start_idx, end_idx)]
+        return "\n".join(chunk) if chunk else "Error: No lines in range."
 
     def edit_file(self, filepath: str, old_str: str, new_str: str) -> str:
         """
@@ -73,31 +120,20 @@ class SWEBenchTools:
         Returns:
             A success message or an error if the string was not found.
         """
-        try:
-            with open(filepath, "r", encoding="utf-8") as f:
-                content = f.read()
-
-            if old_str not in content:
-                return (
-                    "Error: 'old_str' not found in the file. No changes "
-                    "made. Make sure the indentation and line breaks match "
-                    "exactly."
-                )
-
-            occurrences = content.count(old_str)
-            new_content = content.replace(old_str, new_str)
-
-            with open(filepath, "w", encoding="utf-8") as f:
-                f.write(new_content)
-
-            return (
-                f"Success: Replaced {occurrences} occurrence(s) of the string."
-            )
-
-        except FileNotFoundError:
+        read = self._exec(f"cat {shlex.quote(filepath)}")
+        if read["exit_code"] != 0:
             return f"Error: File '{filepath}' not found."
-        except Exception as e:
-            return f"Error editing file: {str(e)}"
+        content = read["stdout"]
+        if old_str not in content:
+            return "Error: 'old_str' not found. No changes made. "
+        occurrences = content.count(old_str)
+        new_content = content.replace(old_str, new_str)
+        write = self._exec(
+            f"cat > {shlex.quote(filepath)}", input_data=new_content
+        )
+        if write["exit_code"] != 0:
+            return f"Error writing file: {write['stderr'].strip()}"
+        return f"Success: Replaced {occurrences} occurrence(s)."
 
     def list_files(self, directory: str, pattern: str = "*") -> str:
         """
@@ -111,120 +147,78 @@ class SWEBenchTools:
         Returns:
             A list of matching file paths.
         """
-        try:
-            if not os.path.isdir(directory):
-                return f"Error: Directory '{directory}' not found."
+        out = self._exec(
+            f"find {shlex.quote(directory)} -type f -name {shlex.quote(pattern)}"
+        )
+        if out["exit_code"] != 0:
+            return f"Error: {out['stderr'].strip()}"
+        return out["stdout"].strip() or f"No files matching '{pattern}'."
 
-            search_path = os.path.join(directory, "**", pattern)
-            files = glob.glob(search_path, recursive=True)
+    # Code Search Tools
 
-            if not files:
-                return (
-                    f"No files found matching pattern '{pattern}' "
-                    f"in '{directory}'."
-                )
+    def search_code(self, pattern: str, file_pattern: str = "*.py") -> str:
+        """Grep-like search. Output: /abs/path:line <content>."""
+        out = self._exec(
+            f"grep -rEn --include={shlex.quote(file_pattern)} "
+            f"-e {shlex.quote(pattern)} {self.TESTBED}"
+        )
+        if out["exit_code"] not in (0, 1):
+            return f"Error: {out['stderr'].strip()}"
+        lines = out["stdout"].splitlines()
+        if not lines:
+            return f"No matches found for '{pattern}'."
+        formatted = []
+        for ln in lines[:100]:
+            parts = ln.split(":", 2)
+            formatted.append(
+                f"{parts[0]}:{parts[1]} {parts[2]}" if len(parts) == 3 else ln
+            )
+        if len(lines) > 100:
+            formatted.append(
+                f"...and {len(lines) - 100} more. Refine your search."
+            )
+        return "\n".join(formatted)
 
-            files = [f for f in files if os.path.isfile(f)]
-            return "\n".join(files)
+    def search_function_or_class_definition_in_code(self, name: str) -> str:
+        """Find a function or class definition."""
+        return self.search_code(f"(def|class) {name}")
 
-        except Exception as e:
-            return f"Error listing files: {str(e)}"
+    def find_references(
+        self, name: str, filepath: str = "", line: int = 0
+    ) -> str:
+        """Find all usages of a symbol."""
+        return self.search_code(name)
 
-    def search_code(self, directory: str, query: str) -> str:
-        """
-        Search for an exact string or keyword across all Python files in a directory.
+    # Execution Tools
 
-        Args:
-            directory: The directory path to search in.
-            query: The exact string to search for.
+    def run_command(self, command: str, workdir: str = TESTBED) -> str:
+        out = self._exec(command, workdir)
+        return (
+            f"STDOUT:\n{out['stdout']}\n\nSTDERR:\n{out['stderr']}"
+            f"\n\nEXIT_CODE:\n{out['exit_code']}"
+        )
 
-        Returns:
-            A list of matches formatted as 'filepath:line_number: matched_line_content'.
-        """
-        try:
-            if not os.path.isdir(directory):
-                return f"Error: Directory '{directory}' not found."
+    def get_patch(self) -> str:
+        out = self._exec("git -c core.fileMode=false diff")
+        return out["stdout"]
 
-            matches = []
-            for filepath in glob.glob(
-                os.path.join(directory, "**", "*.py"), recursive=True
-            ):
-                try:
-                    with open(filepath, "r", encoding="utf-8") as f:
-                        for i, line in enumerate(f):
-                            if query in line:
-                                matches.append(
-                                    f"{filepath}:{i + 1}: {line.strip()}"
-                                )
-                except Exception:
-                    continue
-
-            if not matches:
-                return f"No matches found for '{query}' in '{directory}'."
-
-            if len(matches) > 100:
-                return (
-                    "\n".join(matches[:100])
-                    + f"\n...and {len(matches) - 100} more matches. Please refine your search."
-                )
-
-            return "\n".join(matches)
-
-        except Exception as e:
-            return f"Error searching code: {str(e)}"
-
-    def search_function_or_class(self, directory: str, name: str) -> str:
-        """
-        Search for the definition of a specific Python function or class (e.g., 'def my_func' or 'class MyClass').
-
-        Args:
-            directory: The directory path to search in.
-            name: The exact name of the function or class.
-
-        Returns:
-            A list of file paths and line numbers where the definition was found.
-        """
-        def_query = f"def {name}"
-        class_query = f"class {name}"
-
-        try:
-            matches = []
-            for filepath in glob.glob(
-                os.path.join(directory, "**", "*.py"), recursive=True
-            ):
-                try:
-                    with open(filepath, "r", encoding="utf-8") as f:
-                        for i, line in enumerate(f):
-                            if def_query in line or class_query in line:
-                                matches.append(
-                                    f"{filepath}:{i + 1}: {line.strip()}"
-                                )
-                except Exception:
-                    continue
-
-            if not matches:
-                return f"No definition found for '{name}' in '{directory}'."
-
-            return "\n".join(matches)
-
-        except Exception as e:
-            return f"Error searching for definition: {str(e)}"
-
-    def find_references(self, directory: str, name: str) -> str:
-        """
-        Find where a specific function, class, or variable is used/called in the codebase.
-
-        Args:
-            directory: The directory path to search in.
-            name: The name of the identifier to find references for.
-
-        Returns:
-            A list of matches showing where the identifier is used.
-        """
-        return self.search_code(directory, name)
+    def run_tests(self) -> str:
+        out = self._exec(self._eval_script, timeout=900)
+        return (
+            f"STDOUT:\n{out['stdout']}\n\nSTDERR:\n{out['stderr']}"
+            f"\n\nEXIT_CODE:\n{out['exit_code']}"
+        )
 
     def run(self):
-        self.mcp.run()
+        try:
+            self.mcp.run()
+        finally:
+            if self._container_id:
+                subprocess.run(
+                    ["docker", "rm", "-f", self._container_id],
+                    capture_output=True,
+                )
+                self._container_id = None
 
 
 if __name__ == "__main__":
