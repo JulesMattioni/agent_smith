@@ -7,12 +7,21 @@ import time
 
 
 class Agent:
+    """Autonomous agent that iterates between an LLM and a sandbox."""
+
     def __init__(
         self,
         llm_client: BaseClient,
         sandbox: Sandbox,
         max_iterations: int = 10,
     ):
+        """Initialize the agent.
+
+        Args:
+            llm_client: LLM client used to generate responses.
+            sandbox: Sandbox used to execute extracted code.
+            max_iterations: Maximum number of LLM/sandbox cycles.
+        """
         self.llm = llm_client
         self.sandbox = sandbox
         self.max_iterations = max_iterations
@@ -20,6 +29,17 @@ class Agent:
     def run(
         self, task: str, system_prompt: str, task_id: str, benchmark: str
     ) -> SolutionOutput:
+        """Run the agent loop until a final answer or max iterations.
+
+        Args:
+            task: The task description shown to the LLM.
+            system_prompt: The system prompt prepended to conversation.
+            task_id: Unique identifier for the task.
+            benchmark: Benchmark name ('mbpp' or 'swebench').
+
+        Returns:
+            A SolutionOutput with the final answer and step metrics.
+        """
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": task},

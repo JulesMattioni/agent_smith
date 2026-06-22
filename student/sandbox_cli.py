@@ -6,10 +6,18 @@ from student.core.mcp.client import MCPClient
 
 
 class SandboxCLI:
+    """Interactive CLI for executing code in the sandbox."""
+
     def __init__(self):
+        """Parse CLI arguments and store them."""
         self.args = self._parse_args()
 
     def _parse_args(self):
+        """Define and parse CLI arguments.
+
+        Returns:
+            Parsed argument namespace.
+        """
         parser = argparse.ArgumentParser()
         parser.add_argument(
             "config", nargs="?", help="Path to sandbox config JSON"
@@ -21,6 +29,11 @@ class SandboxCLI:
         return parser.parse_args()
 
     def _build_client(self) -> MCPClient | None:
+        """Build and connect an MCP client from CLI args.
+
+        Returns:
+            A connected MCPClient, or None if no MCP flag was given.
+        """
         if self.args.mcp_stdio:
             client = MCPClient(command=self.args.mcp_stdio)
             client.connect()
@@ -32,6 +45,11 @@ class SandboxCLI:
         return None
 
     def _load_config(self) -> SandboxConfig:
+        """Load sandbox config from a JSON file or use defaults.
+
+        Returns:
+            A SandboxConfig instance.
+        """
         if self.args.config:
             import json
 
@@ -40,6 +58,7 @@ class SandboxCLI:
         return SandboxConfig()
 
     def run(self):
+        """Start the interactive sandbox REPL."""
         config = self._load_config()
         client = self._build_client()
         sandbox = Sandbox(config, mcp_client=client)
@@ -83,6 +102,7 @@ class SandboxCLI:
 
 
 def main() -> None:
+    """Load environment variables and start the sandbox CLI."""
     dotenv.load_dotenv()
     cli = SandboxCLI()
     cli.run()

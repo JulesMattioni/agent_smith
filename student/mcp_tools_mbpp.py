@@ -6,41 +6,29 @@ import sys
 
 
 class MBPPTools:
-    """Utilities for registering MCP tools to run MBPP-style tests."""
+    """MCP server exposing tools for MBPP task evaluation."""
 
     def __init__(self):
+        """Initialize the FastMCP server and register tools."""
         self.__mcp = FastMCP("mbpp-tools")
         self._register_tools()
 
     def _register_tools(self):
+        """Register all MCP tools on the FastMCP instance."""
         self.__mcp.tool()(self.run_tests)
 
     def run_tests(
         self, code: str, test_list: List[str], test_imports: List[str]
     ) -> str:
-        """
-        Execute tests against provided code.
+        """Execute tests against the provided code in a subprocess.
 
-        Parameters
-        ----------
-        code : str
-            The code to test.
-        test_list : List[str]
-            List of test statements to execute.
-        test_imports : List[str]
-            List of import statements required for tests.
+        Args:
+            code: The solution code to test.
+            test_list: List of assertion statements to run.
+            test_imports: List of import statements required by tests.
 
-        Returns
-        -------
-        str
-            Test execution output or error message.
-
-        Raises
-        ------
-        subprocess.TimeoutExpired
-            If execution exceeds 30 seconds timeout.
-        Exception
-            Catches and returns critical errors as string.
+        Returns:
+            Test execution output, or an error message on failure.
         """
         import_code = "\n".join(test_imports)
         tests_code = "\n".join(test_list)
@@ -67,6 +55,7 @@ class MBPPTools:
                 return f"Critical error: {e}"
 
     def run(self):
+        """Start the MCP server."""
         self.__mcp.run()
 
 

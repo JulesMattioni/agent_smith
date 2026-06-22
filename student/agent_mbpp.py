@@ -10,11 +10,19 @@ from student.core.cli.base_agent import BaseAgentCLI
 
 
 class MBPPAgentCLI(BaseAgentCLI):
+    """CLI entrypoint for running an agent on MBPP tasks."""
+
     def _load_task(self) -> MBPPTaskInput:
+        """Load an MBPP task from the JSON file specified in args.
+
+        Returns:
+            A populated MBPPTaskInput instance.
+        """
         with open(self.args.task_file) as f:
             return MBPPTaskInput(**json.load(f))
 
     def run(self):
+        """Set up the agent components and solve the MBPP task."""
         task_input = self._load_task()
 
         mcp_client = MCPClient(command="python mcp_tools_mbpp.py")
@@ -29,6 +37,9 @@ class MBPPAgentCLI(BaseAgentCLI):
         sandbox = Sandbox(config, mcp_client)
         agent = Agent(client, sandbox)
 
+        func_name = task_input.function_definition.split("(")[0].replace(
+            "def ", ""
+        )
         task = f"""Solve the following Python programming task:
 
 Task: {task_input.task_definition}
@@ -46,7 +57,7 @@ Instructions:
 4. Call final_answer() with the COMPLETE function source code as a string
 
 IMPORTANT: final_answer() must receive the complete function code, like this:
-final_answer(\"\"\"def {task_input.function_definition.split('(')[0].replace('def ', '')}(...):
+final_answer(\"\"\"def {func_name}(...):
     # your implementation here
 \"\"\")
 """
@@ -62,8 +73,8 @@ call the function `final_answer("your result")`.
 
 {mcp_client.get_man()}
 
-IMPORTANT: Be concise. Write minimal code without docstrings, comments,
-or unnecessary validations."""
+IMPORTANT: Be concise. Write minimal code without docstrings,
+comments, or unnecessary validations."""
 
         res = agent.run(
             task=task,

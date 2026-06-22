@@ -9,7 +9,16 @@ from pydantic import ValidationError
 
 
 class BaseClient(ABC):
+    """Abstract base class for LLM API clients."""
+
     def __init__(self, model_name: str, provider_name: str, base_url: str):
+        """Initialize the client and load API keys.
+
+        Args:
+            model_name: The model identifier to use for generation.
+            provider_name: Provider name used to look up API keys.
+            base_url: Base URL of the LLM API endpoint.
+        """
         self.__provider_name = provider_name
         self._key_manager = KeyManager(self.__provider_name)
         self.model_name = model_name
@@ -19,19 +28,49 @@ class BaseClient(ABC):
     def generate(
         self, messages: list[dict], stop_sequences: list[str] = None
     ) -> LlmResponse:
+        """Generate a response from the LLM.
+
+        Args:
+            messages: List of message dicts with 'role' and 'content'.
+            stop_sequences: Optional list of stop strings.
+
+        Returns:
+            An LlmResponse with content and token usage.
+        """
         pass
 
 
 class OpenRouterClient(BaseClient):
+    """LLM client that targets an OpenRouter-compatible API."""
+
     def __init__(
         self, model_name: str, provider_name: str, base_url: str
     ) -> None:
+        """Initialize the OpenRouter client.
+
+        Args:
+            model_name: The model identifier to use.
+            provider_name: Provider name used to look up API keys.
+            base_url: Base URL of the OpenRouter API.
+        """
         super().__init__(model_name, provider_name, base_url)
 
     def generate(
         self, messages: list[dict], stop_sequences: list[str] = None
     ) -> LlmResponse:
+        """Send a chat completion request, rotating keys on failure.
 
+        Args:
+            messages: List of message dicts with 'role' and 'content'.
+            stop_sequences: Optional list of stop strings.
+
+        Returns:
+            An LlmResponse with content and token usage.
+
+        Raises:
+            ValueError: If all API keys are exhausted or an unexpected
+                HTTP status is returned.
+        """
         max_attempts = self._key_manager.key_count
         attempts = 0
 

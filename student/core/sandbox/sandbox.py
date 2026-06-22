@@ -9,9 +9,22 @@ from ..mcp.client import MCPClient
 
 
 class IsolatedWorker:
+    """Run user code in an isolated subprocess with restricted builtins."""
 
     @staticmethod
     def run(code: str, child_conn, config_dict: dict, tool_names: list):
+        """Execute code in isolation with resource and import limits.
+
+        Communicates with the parent process over ``child_conn`` to
+        handle tool calls and report the final output.
+
+        Args:
+            code: Python source code to execute.
+            child_conn: Child end of a multiprocessing Pipe.
+            config_dict: Configuration with keys 'max_memory_mb',
+                'allowed_dirs', and 'allowed_imports'.
+            tool_names: Names of MCP tools to expose as stubs.
+        """
         max_bytes = config_dict["max_memory_mb"] * 1024 * 1024
         resource.setrlimit(resource.RLIMIT_AS, (max_bytes, max_bytes))
 
@@ -87,16 +100,27 @@ class IsolatedWorker:
             child_conn.send({"type": "SUCCESS", "output": output})
         except Exception as e:
             output = stdout_capture.getvalue()
-            child_conn.send({"type": "ERROR", "output": output, "error": str(e)})
+            child_conn.send(
+                {"type": "ERROR", "output": output, "error": str(e)}
+            )
         finally:
             sys.stdout = sys.__stdout__
             sys.stderr = sys.__stderr__
 
 
 class Sandbox:
+    """Orchestrate isolated code execution with optional MCP tooling."""
+
     def __init__(
         self, config: SandboxConfig, mcp_client: MCPClient | None = None
     ) -> None:
+        """Initialize the sandbox with a config and optional MCP client.
+
+        Args:
+            config: Sandbox configuration (limits, allowed imports).
+            mcp_client: Optional MCP client exposing tools to executed
+                code.
+        """
         self.config = config
         self.mcp_client = mcp_client
         self.tool_names = (
@@ -104,6 +128,14 @@ class Sandbox:
         )
 
     def execute(self, code: str) -> str:
+        """Execute code in a subprocess and return its output.
+
+        Args:
+            code: Python source code to run.
+
+        Returns:
+            Captured stdout, a final answer marker, or an error string.
+        """
         worker_config = {
             "max_memory_mb": self.config.max_memory_mb,
             "allowed_dirs": self.config.allowed_directories,

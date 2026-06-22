@@ -5,9 +5,17 @@ import shlex
 
 
 class SWEBenchTools:
+    """MCP server exposing filesystem and execution tools for SWE-bench."""
+
     TESTBED = "/testbed"
 
     def __init__(self):
+        """Initialize the Docker-backed MCP server and register tools.
+
+        Raises:
+            ValueError: If SWE_DOCKER_IMAGE or SWE_EVAL_SCRIPT env vars
+                are not set.
+        """
         self.mcp = FastMCP("swebench-tools")
 
         self._docker_image = os.getenv("SWE_DOCKER_IMAGE")
@@ -23,6 +31,7 @@ class SWEBenchTools:
     # Utils
 
     def _register_tools(self):
+        """Register all MCP tools on the FastMCP instance."""
         self.mcp.tool()(self.read_file)
         self.mcp.tool()(self.edit_file)
         self.mcp.tool()(self.list_files)
@@ -34,6 +43,11 @@ class SWEBenchTools:
         self.mcp.tool()(self.run_tests)
 
     def _start_container(self) -> None:
+        """Start the Docker container if not already running.
+
+        Raises:
+            RuntimeError: If the docker run command fails.
+        """
         if self._container_id:
             return
         res = subprocess.run(
@@ -52,6 +66,17 @@ class SWEBenchTools:
         timeout: int = 300,
         input_data: str | None = None,
     ) -> dict:
+        """Run a bash command inside the Docker container.
+
+        Args:
+            command: Bash command to execute.
+            workdir: Working directory inside the container.
+            timeout: Timeout in seconds before the command is killed.
+            input_data: Optional stdin data to pipe into the command.
+
+        Returns:
+            Dict with keys 'stdout', 'stderr', and 'exit_code'.
+        """
         self._start_container()
         cmd = ["docker", "exec", "-w", workdir]
         if input_data is not None:
@@ -85,18 +110,15 @@ class SWEBenchTools:
         start_line: int | None = 1,
         end_line: int | None = -1,
     ) -> str:
-        """
-        Read the content of a file with line numbers.
+        """Read the content of a file with line numbers.
 
         Args:
             filepath: The absolute or relative path to the file.
             start_line: The line number to start reading from (1-indexed).
-            Defaults to 1.
-            end_line: The line number to stop reading at.
-            Defaults to -1 (read to end).
+            end_line: The line number to stop reading at (-1 = end).
 
         Returns:
-            The file content formatted as '<line_number>: <line_content>'.
+            File content formatted as '<line_number>: <line_content>'.
         """
         out = self._exec(f"cat {shlex.quote(filepath)}")
         if out["exit_code"] != 0:
@@ -109,13 +131,12 @@ class SWEBenchTools:
         return "\n".join(chunk) if chunk else "Error: No lines in range."
 
     def edit_file(self, filepath: str, old_str: str, new_str: str) -> str:
-        """
-        Replace an exact string in a file with a new string.
+        """Replace an exact string in a file with a new string.
 
         Args:
             filepath: The path to the file to edit.
             old_str: The exact string to find and replace.
-            new_str: The exact string to insert.
+            new_str: The replacement string.
 
         Returns:
             A success message or an error if the string was not found.
@@ -136,19 +157,18 @@ class SWEBenchTools:
         return f"Success: Replaced {occurrences} occurrence(s)."
 
     def list_files(self, directory: str, pattern: str = "*") -> str:
-        """
-        List files in a directory matching a given pattern.
+        """List files in a directory matching a given pattern.
 
         Args:
             directory: The directory path to search in.
-            pattern: The glob pattern to match (e.g., '*.py', '*test*').
-            Defaults to '*'.
+            pattern: Glob pattern to match (e.g., '*.py', '*test*').
 
         Returns:
-            A list of matching file paths.
+            A list of matching file paths, one per line.
         """
         out = self._exec(
-            f"find {shlex.quote(directory)} -type f -name {shlex.quote(pattern)}"
+            f"find {shlex.quote(directory)} -type f "
+            f"-name {shlex.quote(pattern)}"
         )
         if out["exit_code"] != 0:
             return f"Error: {out['stderr'].strip()}"
@@ -157,7 +177,16 @@ class SWEBenchTools:
     # Code Search Tools
 
     def search_code(self, pattern: str, file_pattern: str = "*.py") -> str:
-        """Grep-like search. Output: /abs/path:line <content>."""
+        """Search for a regex pattern across the testbed.
+
+        Args:
+            pattern: Regular expression to search for.
+            file_pattern: Glob pattern to filter files (e.g., '*.py').
+
+        Returns:
+            Matching lines formatted as '/path:line content', capped
+            at 100 results.
+        """
         out = self._exec(
             f"grep -rEn --include={shlex.quote(file_pattern)} "
             f"-e {shlex.quote(pattern)} {self.TESTBED}"
@@ -180,18 +209,43 @@ class SWEBenchTools:
         return "\n".join(formatted)
 
     def search_function_or_class_definition_in_code(self, name: str) -> str:
-        """Find a function or class definition."""
+        """Find a function or class definition by name.
+
+        Args:
+            name: The function or class name to search for.
+
+        Returns:
+            Matching definition lines from the testbed.
+        """
         return self.search_code(f"(def|class) {name}")
 
     def find_references(
         self, name: str, filepath: str = "", line: int = 0
     ) -> str:
-        """Find all usages of a symbol."""
+        """Find all usages of a symbol in the testbed.
+
+        Args:
+            name: Symbol name to search for.
+            filepath: Unused; reserved for future scoped search.
+            line: Unused; reserved for future scoped search.
+
+        Returns:
+            Matching lines containing the symbol name.
+        """
         return self.search_code(name)
 
     # Execution Tools
 
     def run_command(self, command: str, workdir: str = TESTBED) -> str:
+        """Run an arbitrary bash command in the Docker container.
+
+        Args:
+            command: Command to execute.
+            workdir: Working directory inside the container.
+
+        Returns:
+            Formatted string with stdout, stderr, and exit code.
+        """
         out = self._exec(command, workdir)
         return (
             f"STDOUT:\n{out['stdout']}\n\nSTDERR:\n{out['stderr']}"
@@ -199,10 +253,20 @@ class SWEBenchTools:
         )
 
     def get_patch(self) -> str:
+        """Return the current git diff from the testbed.
+
+        Returns:
+            Unified diff string of all uncommitted changes.
+        """
         out = self._exec("git -c core.fileMode=false diff")
         return out["stdout"]
 
     def run_tests(self) -> str:
+        """Run the evaluation script inside the Docker container.
+
+        Returns:
+            Formatted string with stdout, stderr, and exit code.
+        """
         out = self._exec(self._eval_script, timeout=900)
         return (
             f"STDOUT:\n{out['stdout']}\n\nSTDERR:\n{out['stderr']}"
@@ -210,6 +274,7 @@ class SWEBenchTools:
         )
 
     def run(self):
+        """Start the MCP server and clean up the container on exit."""
         try:
             self.mcp.run()
         finally:
