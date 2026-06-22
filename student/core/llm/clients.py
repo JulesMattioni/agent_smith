@@ -40,18 +40,18 @@ class BaseClient(ABC):
         pass
 
 
-class OpenRouterClient(BaseClient):
-    """LLM client that targets an OpenRouter-compatible API."""
+class GroqClient(BaseClient):
+    """LLM client that targets the Groq API."""
 
     def __init__(
         self, model_name: str, provider_name: str, base_url: str
     ) -> None:
-        """Initialize the OpenRouter client.
+        """Initialize the Groq client.
 
         Args:
             model_name: The model identifier to use.
             provider_name: Provider name used to look up API keys.
-            base_url: Base URL of the OpenRouter API.
+            base_url: Base URL of the Groq API.
         """
         super().__init__(model_name, provider_name, base_url)
 

@@ -1,7 +1,7 @@
 import json
 import dotenv
 from models.mbpp import MBPPTaskInput
-from student.core.llm.clients import OpenRouterClient
+from student.core.llm.clients import GroqClient
 from student.core.sandbox.sandbox import Sandbox
 from student.core.sandbox.config import SandboxConfig
 from student.core.agent.agent import Agent
@@ -28,7 +28,7 @@ class MBPPAgentCLI(BaseAgentCLI):
         mcp_client = MCPClient(command="python mcp_tools_mbpp.py")
         mcp_client.connect()
 
-        client = OpenRouterClient(
+        client = GroqClient(
             model_name=self.args.model_name,
             provider_name="groq",
             base_url=self.args.provider_url,
