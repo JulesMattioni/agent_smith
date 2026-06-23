@@ -13,7 +13,10 @@ class Agent:
         self,
         llm_client: BaseClient,
         sandbox: Sandbox,
-        max_iterations: int = 10,
+        max_iterations: int = 30,
+        max_input_tokens: int = 300000,
+        max_output_tokens: int = 10000,
+        max_total_time_seconds: float = 900,
     ):
         """Initialize the agent.
 
@@ -24,7 +27,26 @@ class Agent:
         """
         self.llm = llm_client
         self.sandbox = sandbox
-        self.max_iterations = max_iterations
+        self._max_iterations = max_iterations
+        self._max_input_tokens = max_input_tokens
+        self._max_output_tokens = max_output_tokens
+        self._max_total_time_seconds = max_total_time_seconds
+
+    def _check_limits(
+        self,
+        total_input_tokens: int,
+        total_output_tokens: int,
+        time_elapsed: float,
+        steps: list[StepMetrics],
+    ) -> str | None:
+        if time_elapsed >= self._max_total_time_seconds:
+            return "Time limit reached."
+        if total_output_tokens >= self._max_output_tokens:
+            return "Output token limit reached."
+        next_cost = steps[-1].input_tokens if steps else 0
+        if next_cost + total_input_tokens >= self._max_input_tokens:
+            return "Input token limit reached."
+        return None
 
     def run(
         self, task: str, system_prompt: str, task_id: str, benchmark: str
@@ -52,8 +74,45 @@ class Agent:
         start_time = time.time()
         last_code = ""
 
-        for i in range(self.max_iterations):
-            response = self.llm.generate(messages)
+        for i in range(self._max_iterations):
+            stop = self._check_limits(
+                total_input_tokens,
+                total_output_tokens,
+                time.time() - start_time,
+                steps,
+            )
+            if stop:
+                return SolutionOutput(
+                    task_id=task_id,
+                    benchmark=benchmark,
+                    success=False,
+                    solution=last_code,
+                    system_prompt=system_prompt,
+                    iterations=len(steps),
+                    total_requests=total_requests,
+                    total_input_tokens=total_input_tokens,
+                    total_output_tokens=total_output_tokens,
+                    total_time_seconds=time.time() - start_time,
+                    steps=steps,
+                    error=stop,
+                )
+            try:
+                response = self.llm.generate(messages)
+            except Exception as e:
+                return SolutionOutput(
+                    task_id=task_id,
+                    benchmark=benchmark,
+                    success=False,
+                    solution=last_code,
+                    system_prompt=system_prompt,
+                    iterations=len(steps),
+                    total_requests=total_requests,
+                    total_input_tokens=total_input_tokens,
+                    total_output_tokens=total_output_tokens,
+                    total_time_seconds=time.time() - start_time,
+                    steps=steps,
+                    error=f"LLM generation error: {e}",
+                )
             total_requests += 1
             total_input_tokens += response.input_tokens
             total_output_tokens += response.output_tokens
@@ -65,7 +124,10 @@ class Agent:
                 sandbox_input = ""
             else:
                 last_code = extracted_code
-                observation = self.sandbox.execute(extracted_code)
+                try:
+                    observation = self.sandbox.execute(extracted_code)
+                except Exception as e:
+                    observation = f"Error while executing code in sandbox: {e}"
                 sandbox_input = extracted_code
 
             steps.append(
@@ -114,7 +176,7 @@ class Agent:
             success=False,
             solution=last_code,
             system_prompt=system_prompt,
-            iterations=self.max_iterations,
+            iterations=self._max_iterations,
             total_requests=total_requests,
             total_input_tokens=total_input_tokens,
             total_output_tokens=total_output_tokens,

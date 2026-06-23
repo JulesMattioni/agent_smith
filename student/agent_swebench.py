@@ -1,11 +1,13 @@
 import dotenv
 import json
+import os
 from student.core.cli.base_agent import BaseAgentCLI
 from models.swebench import SWEBenchTaskInput
 from student.core.llm.clients import GroqClient
 from student.core.sandbox.sandbox import Sandbox
 from student.core.sandbox.config import SandboxConfig
 from student.core.agent.agent import Agent
+from student.core.mcp.client import MCPClient
 
 
 class SWEBenchAgentCLI(BaseAgentCLI):
@@ -24,13 +26,19 @@ class SWEBenchAgentCLI(BaseAgentCLI):
         """Set up the agent components and solve the SWE-bench task."""
         task_input = self._load_task()
 
+        os.environ["SWE_DOCKER_IMAGE"] = task_input.docker_image
+        os.environ["SWE_EVAL_SCRIPT"] = task_input.eval_script
+
+        mcp_client = MCPClient(command="python mcp_tools_swebench.py")
+        mcp_client.connect()
+
         client = GroqClient(
             model_name=self.args.model_name,
             provider_name="groq",
             base_url=self.args.provider_url,
         )
         config = SandboxConfig(max_execution_time_seconds=30)
-        sandbox = Sandbox(config, None)
+        sandbox = Sandbox(config, mcp_client)
         agent = Agent(client, sandbox, max_iterations=30)
 
         task = (
@@ -64,6 +72,7 @@ class SWEBenchAgentCLI(BaseAgentCLI):
             "You can use persistent variables, loops, and conditional"
             " logic.\n"
             "You can use `print()` to observe variables and results.\n"
+            f"\n{mcp_client.get_man()}\n"
             "\nIMPORTANT RULES:\n"
             "- Be concise. Write only the necessary code for the"
             " current step.\n"

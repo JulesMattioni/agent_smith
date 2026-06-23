@@ -35,7 +35,7 @@ class MBPPAgentCLI(BaseAgentCLI):
         )
         config = SandboxConfig(max_execution_time_seconds=10)
         sandbox = Sandbox(config, mcp_client)
-        agent = Agent(client, sandbox)
+        agent = Agent(client, sandbox, 10, 6000, 1500, 120)
 
         func_name = task_input.function_definition.split("(")[0].replace(
             "def ", ""

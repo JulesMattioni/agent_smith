@@ -9,15 +9,15 @@ socle Docker, tous les tools en `docker exec`, signatures conformes au §V.5, cl
 
 Fichier : `student/agent_swebench.py`
 
-- [ ] Connecter un MCP client au sandbox (actuellement `Sandbox(config, None)` → aucun tool).
+- [x] Connecter un MCP client au sandbox (actuellement `Sandbox(config, None)` → aucun tool).
       Faire comme MBPP : `MCPClient(command="python mcp_tools_swebench.py")` puis
       `Sandbox(config, mcp_client)`.
-- [ ] Passer la tâche au serveur MCP **via l'environnement**, avant de lancer le client :
+- [x] Passer la tâche au serveur MCP **via l'environnement**, avant de lancer le client :
       ```python
       os.environ["SWE_DOCKER_IMAGE"] = task_input.docker_image
       os.environ["SWE_EVAL_SCRIPT"] = task_input.eval_script
       ```
-- [ ] Injecter `mcp_client.get_man()` dans le `system_prompt` (présent dans MBPP, absent ici)
+- [x] Injecter `mcp_client.get_man()` dans le `system_prompt` (présent dans MBPP, absent ici)
       sinon le LLM ne connaît pas les tools disponibles.
 
 ---
@@ -34,13 +34,13 @@ Fichier : `student/agent_swebench.py`
 
 ## 🟡 Priorité 3 — Robustesse & limites (§VI)
 
-- [ ] **Appliquer les limites dures** :
+- [x] **Appliquer les limites dures** :
       - MBPP : 10 itérations / 6 000 input / 1 500 output / 120 s
       - SWE-bench : 30 itérations / 300 000 input / 10 000 output / 900 s
-- [ ] Arrêter la boucle quand les **tokens cumulés** approchent la limite (pas seulement le
+- [x] Arrêter la boucle quand les **tokens cumulés** approchent la limite (pas seulement le
       nombre d'itérations). Tokens cumulés sur toute la tâche.
-- [ ] **Gestion gracieuse des erreurs** partout — un crash pendant l'éval = échec automatique (§IV.1).
-- [ ] Vérifier la propagation de `KeyboardInterrupt` / `SystemExit` dans le sandbox (§V.2 :
+- [x] **Gestion gracieuse des erreurs** partout — un crash pendant l'éval = échec automatique (§IV.1).
+- [x] Vérifier la propagation de `KeyboardInterrupt` / `SystemExit` dans le sandbox (§V.2 :
       ne doivent pas être avalés silencieusement).
 
 ---
