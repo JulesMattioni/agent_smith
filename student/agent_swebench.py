@@ -3,7 +3,7 @@ import json
 import os
 import re
 from student.core.cli.base_agent import BaseAgentCLI
-from models.swebench import SWEBenchTaskInput
+from student.models.swebench import SWEBenchTaskInput
 from student.core.llm.clients import OpenAICompatibleClient
 from student.core.sandbox.sandbox import Sandbox
 from student.core.sandbox.config import SandboxConfig

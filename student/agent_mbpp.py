@@ -1,6 +1,6 @@
 import json
 import dotenv
-from models.mbpp import MBPPTaskInput
+from student.models.mbpp import MBPPTaskInput
 from student.core.llm.clients import OpenAICompatibleClient
 from student.core.sandbox.sandbox import Sandbox
 from student.core.sandbox.config import SandboxConfig

@@ -1,7 +1,7 @@
 from ..llm.clients import BaseClient
 from ..extractor.code_extractor import CodeExtractor
 from ..sandbox.sandbox import Sandbox
-from models.mbpp import StepMetrics, SolutionOutput
+from ...models.mbpp import StepMetrics, SolutionOutput
 from typing import Callable, Optional
 import re
 import time

@@ -9,7 +9,7 @@ class SWEBenchTools:
 
     TESTBED = "/testbed"
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the Docker-backed MCP server and register tools.
 
         Raises:
@@ -30,7 +30,7 @@ class SWEBenchTools:
 
     # Utils
 
-    def _register_tools(self):
+    def _register_tools(self) -> None:
         """Register all MCP tools on the FastMCP instance."""
         self.mcp.tool()(self.read_file)
         self.mcp.tool()(self.edit_file)
