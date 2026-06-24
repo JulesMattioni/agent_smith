@@ -158,7 +158,7 @@ class SWEBenchTools:
             if anchor:
                 for i, line in enumerate(lines, 1):
                     if anchor in line:
-                        window = lines[i - 1 : i + 1]
+                        window = lines[i - 1: i + 1]
                         hints.extend(
                             f"{i + off}: {w}" for off, w in enumerate(window)
                         )
@@ -247,14 +247,12 @@ class SWEBenchTools:
         return self.search_code(f"(def|class) {name}")
 
     def find_references(
-        self, name: str, filepath: str = "", line: int = 0
+        self, name: str,
     ) -> str:
         """Find all usages of a symbol in the testbed.
 
         Args:
             name: Symbol name to search for.
-            filepath: Unused; reserved for future scoped search.
-            line: Unused; reserved for future scoped search.
 
         Returns:
             Matching lines containing the symbol name.
