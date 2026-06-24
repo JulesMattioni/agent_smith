@@ -51,6 +51,8 @@ class OpenAICompatibleClient(BaseClient):
     is selected purely by ``base_url``.
     """
 
+    RATE_LIMIT_MAX_WAIT = 120
+
     def __init__(self, model_name: str, base_url: str) -> None:
         """Initialize the client.
 
@@ -85,6 +87,7 @@ class OpenAICompatibleClient(BaseClient):
 
         attempts = 0
         rate_limit_retries = 0
+        rate_limit_sweep = 0
         server_retries = 0
 
         while True:
@@ -154,13 +157,22 @@ class OpenAICompatibleClient(BaseClient):
                 response.status_code == 413
                 and "rate_limit_exceeded" in (response.text or "")
             ):
+                rate_limit_sweep += 1
+                if rate_limit_sweep < self._key_manager.live_count:
+                    self._key_manager.rotate_key()
+                    continue
+                rate_limit_sweep = 0
                 rate_limit_retries += 1
                 if rate_limit_retries > max_rate_limit_retries:
                     raise ValueError("All API keys rate limit used.")
                 wait = self._parse_retry_after(response, 5)
+                if wait > self.RATE_LIMIT_MAX_WAIT:
+                    raise ValueError(
+                        f"Rate limit requires waiting {wait}s, over the "
+                        f"{self.RATE_LIMIT_MAX_WAIT}s cap; aborting."
+                    )
                 print(
-                    f"Rate limited ({response.status_code}), retrying in "
-                    f"{wait}s "
+                    f"All keys rate limited, sleeping {wait}s "
                     f"({rate_limit_retries}/{max_rate_limit_retries})...",
                     file=sys.stderr,
                 )
@@ -175,8 +187,7 @@ class OpenAICompatibleClient(BaseClient):
                         f"with all available keys: {response.text}"
                     )
                 print(
-                    f"Error {response.status_code}, "
-                    "trying next API key...",
+                    f"Error {response.status_code}, " "trying next API key...",
                     file=sys.stderr,
                 )
 

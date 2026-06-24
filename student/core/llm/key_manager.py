@@ -51,6 +51,11 @@ class KeyManager:
         return any(k not in self.__dead for k in self.__keys)
 
     @property
+    def live_count(self) -> int:
+        """Return the number of keys not marked dead."""
+        return sum(1 for k in self.__keys if k not in self.__dead)
+
+    @property
     def key_count(self) -> int:
         """Return the total number of API keys in the pool."""
         return len(self.__keys)

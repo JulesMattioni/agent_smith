@@ -14,11 +14,9 @@ systématique et livrables.
 - [x] **Dé-câbler le provider en dur** : `provider_name="groq"` est figé dans
       `agent_mbpp.py` et `agent_swebench.py` → en faire un argument CLI ou le déduire de l'URL
       (abstraction multi-providers, §V.6).
-- [ ] **Plafonner l'attente sur rate-limit** (`core/llm/clients.py`) : sur un 429/413,
-      Groq peut renvoyer un `Retry-After` énorme (vu : 2806 s) → le client dort plus longtemps
-      que le budget total de la run. Ajouter un `RATE_LIMIT_MAX_WAIT` : au-delà, abandonner
-      proprement avec un message clair. Idéalement : **rotation de clé d'abord**, ne dormir que
-      lorsque toutes les clés du `KeyManager` sont épuisées.
+- [x] **Plafonner l'attente sur rate-limit** (`core/llm/clients.py`) : `RATE_LIMIT_MAX_WAIT`
+      (120 s) → au-delà, abandon propre. Rotation de clé d'abord (balayage des clés vivantes
+      via `KeyManager.live_count`), back-off plafonné seulement quand toutes sont throttlées.
 - [ ] **Try/Except partout** Ajouter les try/except autour des main pour eviter tout crash.
 
 ---
