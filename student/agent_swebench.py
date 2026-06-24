@@ -1,6 +1,7 @@
 import dotenv
 import json
 import os
+import re
 from student.core.cli.base_agent import BaseAgentCLI
 from models.swebench import SWEBenchTaskInput
 from student.core.llm.clients import GroqClient
@@ -26,6 +27,7 @@ class SWEBenchAgentCLI(BaseAgentCLI):
         """Set up the agent components and solve the SWE-bench task."""
         task_input = self._load_task()
 
+        # print(f"======= {task_input.docker_image}")
         os.environ["SWE_DOCKER_IMAGE"] = task_input.docker_image
         os.environ["SWE_EVAL_SCRIPT"] = task_input.eval_script
 
@@ -39,7 +41,9 @@ class SWEBenchAgentCLI(BaseAgentCLI):
         )
         config = SandboxConfig(max_execution_time_seconds=30)
         sandbox = Sandbox(config, mcp_client)
-        agent = Agent(client, sandbox, max_iterations=30)
+        agent = Agent(
+            client, sandbox, max_iterations=30, max_tokens_per_call=2048
+        )
 
         task = (
             f"Solve the following GitHub issue in the repository"
@@ -66,13 +70,29 @@ class SWEBenchAgentCLI(BaseAgentCLI):
             " fixing.\n"
             "To solve the user's task, you must write Python code"
             " inside a\n"
-            "```python code block.\n"
+            "```python code block, and end that block with the marker"
+            " <end_code> on its own line.\n"
+            "Write EXACTLY ONE code block per turn, then STOP and wait."
+            " Do NOT write more code, and do NOT invent or predict the"
+            " Observation yourself: the sandbox will run your code and"
+            " give you the real output.\n"
             "This code will be executed in a sandbox, and you will"
             " receive the standard output (Observation).\n"
             "You can use persistent variables, loops, and conditional"
             " logic.\n"
             "You can use `print()` to observe variables and results.\n"
             f"\n{mcp_client.get_man()}\n"
+            "\nEach tool is a plain Python function. Call it directly by"
+            " its name with keyword arguments. Do NOT prefix it with a"
+            " module or object (write `search_code(...)`, never"
+            " `search_code.search_code(...)`).\n"
+            "Example turn:\n"
+            "```python\n"
+            'result = search_code(pattern="CheckConstraint")\n'
+            "print(result)\n"
+            "```\n"
+            "<end_code>\n"
+            f"\n{config.describe_constraints()}\n"
             "\nIMPORTANT RULES:\n"
             "- Be concise. Write only the necessary code for the"
             " current step.\n"
@@ -83,11 +103,43 @@ class SWEBenchAgentCLI(BaseAgentCLI):
             " `final_answer(get_patch())`."
         )
 
+        def validate_answer(patch: str) -> str | None:
+            """Run the real evaluation script against the submitted patch.
+
+            The task input does not expose the FAIL_TO_PASS/PASS_TO_PASS
+            test list, so correctness is judged by requiring BOTH a clean
+            exit code AND the absence of failure markers in the report
+            (some eval scripts, e.g. sympy's bin/test, return exit code 0
+            even when tests fail). This rejects a final_answer whose patch
+            does not actually make the tests pass.
+            """
+            result = mcp_client.call_tool("run_tests", {})
+            exit_match = re.search(r"EXIT_CODE:\s*(-?\d+)", result)
+            exit_ok = exit_match.group(1) == "0" if exit_match else True
+            failure_markers = re.search(
+                r"\[FAIL\]"
+                r"|FAILED \("
+                r"|\d+ failed"
+                r"|=+ FAILURES =+"
+                r"|Traceback \(most recent",
+                result,
+            )
+            if exit_ok and not failure_markers:
+                return None
+            tail = result if len(result) <= 4000 else result[-4000:]
+            return (
+                "final_answer rejected: the evaluation tests did not pass.\n"
+                f"{tail}\n"
+                "Inspect the failures, fix the code with edit_file, verify "
+                "with run_tests(), then call final_answer(get_patch()) again."
+            )
+
         res = agent.run(
             task=task,
             system_prompt=system_prompt,
             task_id=str(task_input.instance_id),
             benchmark="swebench",
+            answer_validator=validate_answer,
         )
 
         self._save_output(res)

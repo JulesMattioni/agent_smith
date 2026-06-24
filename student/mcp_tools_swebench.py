@@ -143,17 +143,44 @@ class SWEBenchTools:
         """
         read = self._exec(f"cat {shlex.quote(filepath)}")
         if read["exit_code"] != 0:
-            return f"Error: File '{filepath}' not found."
+            raise FileNotFoundError(
+                f"edit_file made NO changes: file '{filepath}' not found."
+            )
         content = read["stdout"]
         if old_str not in content:
-            return "Error: 'old_str' not found. No changes made. "
+            lines = content.splitlines()
+            anchor = max(
+                (ln.strip() for ln in old_str.splitlines()),
+                key=len,
+                default="",
+            )[:40]
+            hints = []
+            if anchor:
+                for i, line in enumerate(lines, 1):
+                    if anchor in line:
+                        window = lines[i - 1 : i + 1]
+                        hints.extend(
+                            f"{i + off}: {w}" for off, w in enumerate(window)
+                        )
+            hint_text = "\n".join(hints[:12]) or "(no similar lines found)"
+            raise ValueError(
+                "edit_file made NO changes: 'old_str' was not found "
+                "exactly. It must match the file byte-for-byte, including "
+                "leading indentation and newlines (the target often spans "
+                "several lines). Closest lines in the file:\n"
+                f"{hint_text}\n"
+                "Re-read these exact lines and copy them verbatim as "
+                "old_str."
+            )
         occurrences = content.count(old_str)
         new_content = content.replace(old_str, new_str)
         write = self._exec(
             f"cat > {shlex.quote(filepath)}", input_data=new_content
         )
         if write["exit_code"] != 0:
-            return f"Error writing file: {write['stderr'].strip()}"
+            raise IOError(
+                f"edit_file failed to write: {write['stderr'].strip()}"
+            )
         return f"Success: Replaced {occurrences} occurrence(s)."
 
     def list_files(self, directory: str, pattern: str = "*") -> str:

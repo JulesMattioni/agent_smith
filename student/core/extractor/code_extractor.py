@@ -31,13 +31,18 @@ class CodeExtractor:
     def _extract_python_block(text: str) -> str | None:
         """Extract code from a fenced ```python ... ``` block.
 
+        The closing fence is optional: some models stop right after the
+        code (e.g. cut by a stop sequence) and never emit a trailing
+        ```. In that case the block is taken up to the end of the text.
+        When several blocks are present, only the first is returned.
+
         Args:
             text: Raw LLM output text.
 
         Returns:
             Code content, or None if no block was found.
         """
-        pattern = r"```python\n(.*?)```"
+        pattern = r"```python\n(.*?)(?:```|\Z)"
         res = re.search(pattern, text, re.DOTALL)
         if res:
             return res.group(1).strip()

@@ -2,6 +2,7 @@ import asyncio
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamable_http_client
+import os
 
 
 class MCPClient:
@@ -22,6 +23,10 @@ class MCPClient:
             self.params = StdioServerParameters(
                 command=args[0],
                 args=args[1:],
+                env={
+                    "SWE_DOCKER_IMAGE": str(os.getenv("SWE_DOCKER_IMAGE")),
+                    "SWE_EVAL_SCRIPT": str(os.getenv("SWE_EVAL_SCRIPT")),
+                },
             )
             self.transport = "stdio"
         elif url:
@@ -65,9 +70,20 @@ class MCPClient:
 
         Returns:
             The text content of the tool response.
+
+        Raises:
+            RuntimeError: If the MCP server reports the tool call as an
+                error (``isError``). Propagating it lets a failed tool
+                (e.g. an edit_file that matched nothing) surface in the
+                sandbox observation and halt the current code block,
+                instead of being silently discarded when the model does
+                not print the return value.
         """
         res = await self.session.call_tool(name, args)
-        return res.content[0].text
+        text = res.content[0].text if res.content else ""
+        if getattr(res, "isError", False):
+            raise RuntimeError(text)
+        return text
 
     def call_tool(self, name: str, args: dict) -> str:
         """Call a tool on the MCP server synchronously.
@@ -92,7 +108,23 @@ class MCPClient:
         for name in self._tools:
 
             def make_tool(tool_name):
-                def tool(**kwargs):
+                schema = self._tools[tool_name].inputSchema or {}
+                param_names = list(schema.get("properties", {}).keys())
+
+                def tool(*args, **kwargs):
+                    if len(args) > len(param_names):
+                        raise TypeError(
+                            f"{tool_name}() takes at most "
+                            f"{len(param_names)} positional arguments "
+                            f"but {len(args)} were given"
+                        )
+                    for param_name, value in zip(param_names, args):
+                        if param_name in kwargs:
+                            raise TypeError(
+                                f"{tool_name}() got multiple values for "
+                                f"argument '{param_name}'"
+                            )
+                        kwargs[param_name] = value
                     return self.call_tool(tool_name, kwargs)
 
                 tool.__name__ = tool_name

@@ -6,6 +6,7 @@ import os
 import socket
 from .config import SandboxConfig
 from ..mcp.client import MCPClient
+import traceback
 
 
 class IsolatedWorker:
@@ -98,10 +99,14 @@ class IsolatedWorker:
             _safe_exec(code, exec_globals)
             output = stdout_capture.getvalue()
             child_conn.send({"type": "SUCCESS", "output": output})
-        except Exception as e:
+        except Exception:
             output = stdout_capture.getvalue()
             child_conn.send(
-                {"type": "ERROR", "output": output, "error": str(e)}
+                {
+                    "type": "ERROR",
+                    "output": output,
+                    "error": traceback.format_exc(),
+                }
             )
         finally:
             sys.stdout = sys.__stdout__
@@ -110,6 +115,36 @@ class IsolatedWorker:
 
 class Sandbox:
     """Orchestrate isolated code execution with optional MCP tooling."""
+
+    MAX_OBSERVATION_CHARS = 6000
+
+    @classmethod
+    def _truncate(cls, text: str) -> str:
+        """Cap an observation and signal truncation explicitly.
+
+        A single oversized tool output (e.g. listing a whole repo) can
+        blow up the conversation context. We keep the head and tail of
+        the output and insert an explicit notice so the LLM is never left
+        guessing about what was cut.
+
+        Args:
+            text: The raw observation text.
+
+        Returns:
+            The text unchanged if within the limit, otherwise a truncated
+            version with an explicit marker.
+        """
+        limit = cls.MAX_OBSERVATION_CHARS
+        if len(text) <= limit:
+            return text
+        head = limit // 2
+        tail = limit - head
+        notice = (
+            f"\n[... output truncated due to size limit: "
+            f"{len(text)} chars total, kept first {head} and last {tail} "
+            f"...]\n"
+        )
+        return text[:head] + notice + text[-tail:]
 
     def __init__(
         self, config: SandboxConfig, mcp_client: MCPClient | None = None
@@ -186,11 +221,14 @@ class Sandbox:
                     break
 
                 elif msg["type"] == "SUCCESS":
-                    output_log += msg["output"]
+                    output_log += self._truncate(msg["output"])
                     break
 
                 elif msg["type"] == "ERROR":
-                    output_log += msg["output"] + f"\nError: {msg['error']}"
+                    output_log += (
+                        self._truncate(msg["output"])
+                        + f"\nError: {msg['error']}"
+                    )
                     break
 
             else:
