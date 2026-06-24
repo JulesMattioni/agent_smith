@@ -41,6 +41,8 @@ class MCPClient:
         self.session: Any = None
         self._loop = asyncio.new_event_loop()
         self._tools: dict[str, Any] = {}
+        self._resources: dict[str, Any] = {}
+        self._prompts: dict[str, Any] = {}
 
     async def _connect_async(self) -> None:
         """Open the transport, start the session, and list tools."""
@@ -59,6 +61,36 @@ class MCPClient:
         tools_res = await self.session.list_tools()
         for tool in tools_res.tools:
             self._tools[tool.name] = tool
+
+        await self._list_resources_async()
+        await self._list_prompts_async()
+
+    async def _list_resources_async(self) -> None:
+        """List the server's resources, tolerating unsupported servers.
+
+        Resources are optional in MCP: a server that does not declare the
+        capability raises instead of returning an empty list, so the error
+        is swallowed to keep connection working with any server.
+        """
+        try:
+            resources_res = await self.session.list_resources()
+            for resource in resources_res.resources:
+                self._resources[str(resource.uri)] = resource
+        except Exception:
+            pass
+
+    async def _list_prompts_async(self) -> None:
+        """List the server's prompts, tolerating unsupported servers.
+
+        Prompts are optional in MCP; as with resources, a server without
+        the capability raises, so the error is swallowed.
+        """
+        try:
+            prompts_res = await self.session.list_prompts()
+            for prompt in prompts_res.prompts:
+                self._prompts[prompt.name] = prompt
+        except Exception:
+            pass
 
     def connect(self) -> None:
         """Synchronously connect to the MCP server."""
@@ -152,16 +184,102 @@ class MCPClient:
         finally:
             self._loop.close()
 
+    def get_resources(self) -> dict[str, Any]:
+        """Return the discovered MCP resources keyed by URI."""
+        return self._resources
+
+    def get_prompts(self) -> dict[str, Any]:
+        """Return the discovered MCP prompts keyed by name."""
+        return self._prompts
+
+    async def _read_resource_async(self, uri: str) -> str:
+        """Read a resource's text content asynchronously.
+
+        Args:
+            uri: URI of the resource to read.
+
+        Returns:
+            The concatenated text content of the resource.
+        """
+        res = await self.session.read_resource(uri)
+        return "".join(
+            getattr(c, "text", "") for c in res.contents if res.contents
+        )
+
+    async def _get_prompt_async(
+        self, name: str, args: dict[str, Any] | None = None
+    ) -> str:
+        """Render a prompt template asynchronously.
+
+        Args:
+            name: Name of the prompt to render.
+            args: Arguments to fill the prompt template with.
+
+        Returns:
+            The concatenated text of the rendered prompt messages.
+        """
+        res = await self.session.get_prompt(name, args or {})
+        parts = []
+        for message in res.messages:
+            parts.append(getattr(message.content, "text", ""))
+        return "\n".join(parts)
+
+    def get_prompt(
+        self, name: str, args: dict[str, Any] | None = None
+    ) -> str:
+        """Render a prompt template synchronously.
+
+        Args:
+            name: Name of the prompt to render.
+            args: Arguments to fill the prompt template with.
+
+        Returns:
+            The concatenated text of the rendered prompt messages.
+        """
+        return self._loop.run_until_complete(
+            self._get_prompt_async(name, args)
+        )
+
+    def read_resource(self, uri: str) -> str:
+        """Read a resource's text content synchronously.
+
+        Args:
+            uri: URI of the resource to read.
+
+        Returns:
+            The concatenated text content of the resource.
+        """
+        return self._loop.run_until_complete(self._read_resource_async(uri))
+
     def get_man(self) -> str:
         """Return a human-readable summary of available tools.
 
         Returns:
             Formatted string listing each tool's name, description,
-            and input schema.
+            and input schema, followed by any resources and prompts
+            exposed by the connected server.
         """
         man = "=== MCP TOOLS AVAILABLE ===\n"
         for name, tool in self._tools.items():
             man += f"- Tool: {name}\n"
             man += f"  Description: {tool.description}\n"
             man += f"  Schema: {tool.inputSchema}\n"
+
+        if self._resources:
+            man += "\n=== MCP RESOURCES AVAILABLE ===\n"
+            for uri, resource in self._resources.items():
+                man += f"- Resource: {resource.name}\n"
+                man += f"  URI: {uri}\n"
+                man += f"  Description: {resource.description}\n"
+
+        if self._prompts:
+            man += "\n=== MCP PROMPTS AVAILABLE ===\n"
+            for name, prompt in self._prompts.items():
+                man += f"- Prompt: {name}\n"
+                man += f"  Description: {prompt.description}\n"
+                args = getattr(prompt, "arguments", None)
+                if args:
+                    arg_names = ", ".join(a.name for a in args)
+                    man += f"  Arguments: {arg_names}\n"
+
         return man
