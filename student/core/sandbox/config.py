@@ -49,7 +49,9 @@ class SandboxConfig(BaseModel):
             A human-readable description of the import and filesystem
             restrictions, suitable for injection into a system prompt.
         """
-        modules = sorted({imp.split(".")[0] for imp in self.authorized_imports})
+        modules = sorted(
+            {imp.split(".")[0] for imp in self.authorized_imports}
+        )
         dirs = ", ".join(self.allowed_directories)
         return (
             "SANDBOX ENVIRONMENT CONSTRAINTS:\n"
