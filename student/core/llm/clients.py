@@ -127,13 +127,19 @@ class OpenAICompatibleClient(BaseClient):
 
             if response.status_code == 200:
                 data = response.json()
-                content = data["choices"][0]["message"]["content"]
-                usage = data["usage"]
+                message = data["choices"][0]["message"]
+                content = (
+                    message.get("content")
+                    or message.get("reasoning_content")
+                    or message.get("reasoning")
+                    or ""
+                )
+                usage = data.get("usage") or {}
 
                 try:
                     res = LlmResponse(
-                        input_tokens=usage["prompt_tokens"],
-                        output_tokens=usage["completion_tokens"],
+                        input_tokens=usage.get("prompt_tokens", 0),
+                        output_tokens=usage.get("completion_tokens", 0),
                         content=content,
                         request_time_ms=elapsed_time,
                         model_name=self.model_name,
@@ -161,16 +167,16 @@ class OpenAICompatibleClient(BaseClient):
                 self._key_manager.rotate_key()
                 time.sleep(wait)
 
-            elif response.status_code in [401, 403]:
+            elif response.status_code in [400, 401, 403]:
                 self._key_manager.mark_current_dead()
                 if self._key_manager.rotate_key() is None:
                     raise ValueError(
-                        "No valid API key for this provider "
-                        f"({self.base_url})."
+                        f"Request rejected by provider ({self.base_url}) "
+                        f"with all available keys: {response.text}"
                     )
                 print(
-                    f"Error {response.status_code}, key invalid for this "
-                    "provider, trying next API key...",
+                    f"Error {response.status_code}, "
+                    "trying next API key...",
                     file=sys.stderr,
                 )
 
@@ -189,7 +195,14 @@ class OpenAICompatibleClient(BaseClient):
                 time.sleep(backoff)
 
             else:
-                raise ValueError(f"Unknown error {response.status_code}")
+                print(
+                    f"DEBUG API ERROR {response.status_code}: "
+                    f"{response.text}",
+                    file=sys.stderr,
+                )
+                raise ValueError(
+                    f"Unknown error {response.status_code}: {response.text}"
+                )
 
     def _parse_retry_after(self, response, default: float) -> float:
         """Determine how long to wait before retrying after a 429.
