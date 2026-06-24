@@ -19,6 +19,12 @@ agent_swebench = "student.agent_swebench:main"
 [tool.uv]
 package = true
 
+[tool.mypy]
+
+[[tool.mypy.overrides]]
+module = ["mcp.*", "requests"]
+ignore_missing_imports = true
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

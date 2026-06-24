@@ -7,13 +7,20 @@ import socket
 from .config import SandboxConfig
 from ..mcp.client import MCPClient
 import traceback
+from typing import Any, Callable
+from multiprocessing.connection import Connection
 
 
 class IsolatedWorker:
     """Run user code in an isolated subprocess with restricted builtins."""
 
     @staticmethod
-    def run(code: str, child_conn, config_dict: dict, tool_names: list):
+    def run(
+        code: str,
+        child_conn: Connection,
+        config_dict: dict[str, Any],
+        tool_names: list[str],
+    ) -> None:
         """Execute code in isolation with resource and import limits.
 
         Communicates with the parent process over ``child_conn`` to
@@ -35,7 +42,9 @@ class IsolatedWorker:
 
         _original_open = builtins.open
 
-        def _safe_open(file, mode="r", *args, **kwargs):
+        def _safe_open(
+            file: Any, mode: str = "r", *args: Any, **kwargs: Any
+        ) -> Any:
             abs_path = os.path.abspath(str(file))
             if not any(
                 abs_path.startswith(d) for d in config_dict["allowed_dirs"]
@@ -50,8 +59,12 @@ class IsolatedWorker:
         _original_import = builtins.__import__
 
         def _safe_import(
-            name, globals=None, locals=None, fromlist=(), level=0
-        ):
+            name: str,
+            globals: Any = None,
+            locals: Any = None,
+            fromlist: Any = (),
+            level: int = 0,
+        ) -> Any:
             base_name = name.split(".")[0]
             if base_name not in config_dict["allowed_imports"]:
                 raise ImportError(f"Import '{name}' not allowed.")
@@ -59,19 +72,19 @@ class IsolatedWorker:
 
         builtins.__import__ = _safe_import
 
-        def _blocked_socket(*args, **kwargs):
+        def _blocked_socket(*args: Any, **kwargs: Any) -> Any:
             raise PermissionError("Network access is not allowed.")
 
-        socket.socket = _blocked_socket
+        socket.socket = _blocked_socket  # type: ignore[assignment,misc]
 
         for _name in ["eval", "exec", "compile"]:
             if hasattr(builtins, _name):
                 delattr(builtins, _name)
 
-        exec_globals = {}
+        exec_globals: dict[str, Any] = {}
 
-        def make_tool_stub(tool_name):
-            def tool_stub(**kwargs):
+        def make_tool_stub(tool_name: str) -> Callable[..., Any]:
+            def tool_stub(**kwargs: Any) -> Any:
                 child_conn.send(
                     {"type": "CALL_TOOL", "name": tool_name, "args": kwargs}
                 )
@@ -85,7 +98,7 @@ class IsolatedWorker:
         for name in tool_names:
             exec_globals[name] = make_tool_stub(name)
 
-        def final_answer(answer):
+        def final_answer(answer: Any) -> None:
             child_conn.send({"type": "FINAL_ANSWER", "answer": answer})
             sys.exit(0)
 

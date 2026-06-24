@@ -2,6 +2,7 @@ from mcp.server.fastmcp import FastMCP
 import os
 import subprocess
 import shlex
+from typing import Any
 
 
 class SWEBenchTools:
@@ -18,12 +19,14 @@ class SWEBenchTools:
         """
         self.mcp = FastMCP("swebench-tools")
 
-        self._docker_image = os.getenv("SWE_DOCKER_IMAGE")
-        if not self._docker_image:
+        docker_image = os.getenv("SWE_DOCKER_IMAGE")
+        if not docker_image:
             raise ValueError("SWE_DOCKER_IMAGE missing.")
-        self._eval_script = os.getenv("SWE_EVAL_SCRIPT")
-        if not self._eval_script:
+        self._docker_image: str = docker_image
+        eval_script = os.getenv("SWE_EVAL_SCRIPT")
+        if not eval_script:
             raise ValueError("SWE_EVAL_SCRIPT missing.")
+        self._eval_script: str = eval_script
         self._container_id: str | None = None
 
         self._register_tools()
@@ -65,7 +68,7 @@ class SWEBenchTools:
         workdir: str = TESTBED,
         timeout: int = 300,
         input_data: str | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Run a bash command inside the Docker container.
 
         Args:
@@ -78,6 +81,7 @@ class SWEBenchTools:
             Dict with keys 'stdout', 'stderr', and 'exit_code'.
         """
         self._start_container()
+        assert self._container_id is not None
         cmd = ["docker", "exec", "-w", workdir]
         if input_data is not None:
             cmd.append("-i")
@@ -125,8 +129,10 @@ class SWEBenchTools:
             return f"Error: {out['stderr'].strip()}"
         lines = out["stdout"].splitlines()
         total = len(lines)
-        start_idx = max(0, start_line - 1)
-        end_idx = total if end_line == -1 else min(end_line, total)
+        start = 1 if start_line is None else start_line
+        end = -1 if end_line is None else end_line
+        start_idx = max(0, start - 1)
+        end_idx = total if end == -1 else min(end, total)
         chunk = [f"{i + 1}: {lines[i]}" for i in range(start_idx, end_idx)]
         return "\n".join(chunk) if chunk else "Error: No lines in range."
 
@@ -154,7 +160,7 @@ class SWEBenchTools:
                 key=len,
                 default="",
             )[:40]
-            hints = []
+            hints: list[str] = []
             if anchor:
                 for i, line in enumerate(lines, 1):
                     if anchor in line:
@@ -284,7 +290,7 @@ class SWEBenchTools:
             Unified diff string of all uncommitted changes.
         """
         out = self._exec("git -c core.fileMode=false diff")
-        return out["stdout"]
+        return str(out["stdout"])
 
     def run_tests(self) -> str:
         """Run the evaluation script inside the Docker container.
@@ -298,7 +304,7 @@ class SWEBenchTools:
             f"\n\nEXIT_CODE:\n{out['exit_code']}"
         )
 
-    def run(self):
+    def run(self) -> None:
         """Start the MCP server and clean up the container on exit."""
         try:
             self.mcp.run()

@@ -7,11 +7,11 @@ from pydantic import BaseModel
 class BaseAgentCLI(ABC):
     """Abstract base class for agent CLI entrypoints."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Parse CLI arguments and store them."""
         self.args = self._parse_args()
 
-    def _parse_args(self):
+    def _parse_args(self) -> argparse.Namespace:
         """Define and parse shared CLI arguments.
 
         Returns:
@@ -24,7 +24,7 @@ class BaseAgentCLI(ABC):
         parser.add_argument("--provider-url", required=True)
         return parser.parse_args()
 
-    def _save_output(self, output: BaseModel):
+    def _save_output(self, output: BaseModel) -> None:
         """Serialize and write the output model to the output file.
 
         Args:
@@ -40,6 +40,6 @@ class BaseAgentCLI(ABC):
         pass
 
     @abstractmethod
-    def run(self):
+    def run(self) -> None:
         """Execute the full agent pipeline for the task."""
         pass

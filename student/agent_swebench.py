@@ -23,7 +23,7 @@ class SWEBenchAgentCLI(BaseAgentCLI):
         with open(self.args.task_file) as f:
             return SWEBenchTaskInput(**json.load(f))
 
-    def run(self):
+    def run(self) -> None:
         """Set up the agent components and solve the SWE-bench task."""
         task_input = self._load_task()
 

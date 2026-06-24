@@ -89,7 +89,7 @@ class Agent:
             {"role": "user", "content": task},
         ]
 
-        steps = []
+        steps: list[StepMetrics] = []
         total_input_tokens = 0
         total_output_tokens = 0
         total_requests = 0

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Any
 from .model import LlmResponse
 from .key_manager import KeyManager
 import requests
@@ -26,9 +27,9 @@ class BaseClient(ABC):
     @abstractmethod
     def generate(
         self,
-        messages: list[dict],
-        stop_sequences: list[str] = None,
-        max_tokens: int = None,
+        messages: list[dict[str, Any]],
+        stop_sequences: list[str] | None = None,
+        max_tokens: int | None = None,
     ) -> LlmResponse:
         """Generate a response from the LLM.
 
@@ -64,9 +65,9 @@ class OpenAICompatibleClient(BaseClient):
 
     def generate(
         self,
-        messages: list[dict],
-        stop_sequences: list[str] = None,
-        max_tokens: int = None,
+        messages: list[dict[str, Any]],
+        stop_sequences: list[str] | None = None,
+        max_tokens: int | None = None,
     ) -> LlmResponse:
         """Send a chat completion request, rotating keys on failure.
 
@@ -91,7 +92,7 @@ class OpenAICompatibleClient(BaseClient):
         server_retries = 0
 
         while True:
-            payload = {
+            payload: dict[str, Any] = {
                 "messages": messages,
                 "model": self.model_name,
                 "tool_choice": "none",
@@ -215,7 +216,9 @@ class OpenAICompatibleClient(BaseClient):
                     f"Unknown error {response.status_code}: {response.text}"
                 )
 
-    def _parse_retry_after(self, response, default: float) -> float:
+    def _parse_retry_after(
+        self, response: requests.Response, default: float
+    ) -> float:
         """Determine how long to wait before retrying after a 429.
 
         Reads the ``Retry-After`` header (seconds). Groq also exposes

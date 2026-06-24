@@ -3,12 +3,15 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamable_http_client
 import os
+from typing import Any, Callable
 
 
 class MCPClient:
     """Synchronous wrapper around an async MCP session."""
 
-    def __init__(self, command: str = None, url: str = None):
+    def __init__(
+        self, command: str | None = None, url: str | None = None
+    ) -> None:
         """Initialize the MCP transport configuration.
 
         Args:
@@ -35,11 +38,11 @@ class MCPClient:
         else:
             raise ValueError("Either command or url must be provided")
 
-        self.session = None
+        self.session: Any = None
         self._loop = asyncio.new_event_loop()
-        self._tools = {}
+        self._tools: dict[str, Any] = {}
 
-    async def _connect_async(self):
+    async def _connect_async(self) -> None:
         """Open the transport, start the session, and list tools."""
         if self.transport == "stdio":
             self._stdio_ctx = stdio_client(self.params)
@@ -57,11 +60,11 @@ class MCPClient:
         for tool in tools_res.tools:
             self._tools[tool.name] = tool
 
-    def connect(self):
+    def connect(self) -> None:
         """Synchronously connect to the MCP server."""
         self._loop.run_until_complete(self._connect_async())
 
-    async def _call_tool_async(self, name: str, args: dict) -> str:
+    async def _call_tool_async(self, name: str, args: dict[str, Any]) -> str:
         """Call a tool on the MCP server asynchronously.
 
         Args:
@@ -85,7 +88,7 @@ class MCPClient:
             raise RuntimeError(text)
         return text
 
-    def call_tool(self, name: str, args: dict) -> str:
+    def call_tool(self, name: str, args: dict[str, Any]) -> str:
         """Call a tool on the MCP server synchronously.
 
         Args:
@@ -97,21 +100,21 @@ class MCPClient:
         """
         return self._loop.run_until_complete(self._call_tool_async(name, args))
 
-    def get_tools(self) -> dict:
+    def get_tools(self) -> dict[str, Callable[..., str]]:
         """Return callable wrappers for each registered tool.
 
         Returns:
             Mapping of tool name to a callable that forwards keyword
             arguments to the MCP server.
         """
-        tools = {}
+        tools: dict[str, Callable[..., str]] = {}
         for name in self._tools:
 
-            def make_tool(tool_name):
+            def make_tool(tool_name: str) -> Callable[..., str]:
                 schema = self._tools[tool_name].inputSchema or {}
                 param_names = list(schema.get("properties", {}).keys())
 
-                def tool(*args, **kwargs):
+                def tool(*args: Any, **kwargs: Any) -> str:
                     if len(args) > len(param_names):
                         raise TypeError(
                             f"{tool_name}() takes at most "
@@ -133,14 +136,14 @@ class MCPClient:
             tools[name] = make_tool(name)
         return tools
 
-    async def _disconnect_async(self):
+    async def _disconnect_async(self) -> None:
         """Close the session and transport context managers."""
         if self._session_ctx:
             await self._session_ctx.__aexit__(None, None, None)
         if self._stdio_ctx:
             await self._stdio_ctx.__aexit__(None, None, None)
 
-    def disconnect(self):
+    def disconnect(self) -> None:
         """Synchronously disconnect and close the event loop."""
         try:
             self._loop.run_until_complete(self._disconnect_async())

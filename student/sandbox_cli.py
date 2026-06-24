@@ -8,11 +8,11 @@ from student.core.mcp.client import MCPClient
 class SandboxCLI:
     """Interactive CLI for executing code in the sandbox."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Parse CLI arguments and store them."""
         self.args = self._parse_args()
 
-    def _parse_args(self):
+    def _parse_args(self) -> argparse.Namespace:
         """Define and parse CLI arguments.
 
         Returns:
@@ -57,7 +57,7 @@ class SandboxCLI:
                 return SandboxConfig(**json.load(f))
         return SandboxConfig()
 
-    def run(self):
+    def run(self) -> None:
         """Start the interactive sandbox REPL."""
         config = self._load_config()
         client = self._build_client()

@@ -8,12 +8,12 @@ import sys
 class MBPPTools:
     """MCP server exposing tools for MBPP task evaluation."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the FastMCP server and register tools."""
         self.__mcp = FastMCP("mbpp-tools")
         self._register_tools()
 
-    def _register_tools(self):
+    def _register_tools(self) -> None:
         """Register all MCP tools on the FastMCP instance."""
         self.__mcp.tool()(self.run_tests)
 
@@ -54,7 +54,7 @@ class MBPPTools:
             except Exception as e:
                 return f"Critical error: {e}"
 
-    def run(self):
+    def run(self) -> None:
         """Start the MCP server."""
         self.__mcp.run()
 
