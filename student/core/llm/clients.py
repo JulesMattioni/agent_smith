@@ -207,6 +207,7 @@ class OpenAICompatibleClient(BaseClient):
         Returns:
             The number of seconds to sleep before the next attempt.
         """
+        # Groq-style
         retry_after = response.headers.get("retry-after")
         if retry_after is not None:
             try:
@@ -221,7 +222,7 @@ class OpenAICompatibleClient(BaseClient):
             except ValueError:
                 pass
 
-        # Gemini-style: the delay is inside the JSON error body.
+        # Gemini-style
         body = response.text or ""
         match = re.search(r'"retryDelay"\s*:\s*"([0-9.]+)s"', body)
         if not match:
