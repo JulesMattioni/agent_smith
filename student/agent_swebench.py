@@ -4,7 +4,7 @@ import os
 import re
 from student.core.cli.base_agent import BaseAgentCLI
 from models.swebench import SWEBenchTaskInput
-from student.core.llm.clients import GroqClient
+from student.core.llm.clients import OpenAICompatibleClient
 from student.core.sandbox.sandbox import Sandbox
 from student.core.sandbox.config import SandboxConfig
 from student.core.agent.agent import Agent
@@ -34,7 +34,7 @@ class SWEBenchAgentCLI(BaseAgentCLI):
         mcp_client = MCPClient(command="python mcp_tools_swebench.py")
         mcp_client.connect()
 
-        client = GroqClient(
+        client = OpenAICompatibleClient(
             model_name=self.args.model_name,
             base_url=self.args.provider_url,
         )

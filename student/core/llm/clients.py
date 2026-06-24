@@ -43,15 +43,20 @@ class BaseClient(ABC):
         pass
 
 
-class GroqClient(BaseClient):
-    """LLM client that targets the Groq API."""
+class OpenAICompatibleClient(BaseClient):
+    """LLM client for any OpenAI-compatible chat-completions API.
+
+    Works with any provider exposing the ``/chat/completions`` endpoint
+    (Groq, OpenRouter, Gemini's OpenAI-compatible URL, etc.); the target
+    is selected purely by ``base_url``.
+    """
 
     def __init__(self, model_name: str, base_url: str) -> None:
-        """Initialize the Groq client.
+        """Initialize the client.
 
         Args:
             model_name: The model identifier to use.
-            base_url: Base URL of the Groq API.
+            base_url: Base URL of the OpenAI-compatible API.
         """
         super().__init__(model_name, base_url)
 
