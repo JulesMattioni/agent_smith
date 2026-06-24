@@ -189,7 +189,6 @@ class OpenAICompatibleClient(BaseClient):
                 time.sleep(backoff)
 
             else:
-                print(f"DEBUG API ERROR: {response.text}")
                 raise ValueError(f"Unknown error {response.status_code}")
 
     def _parse_retry_after(self, response, default: float) -> float:

@@ -27,7 +27,6 @@ class SWEBenchAgentCLI(BaseAgentCLI):
         """Set up the agent components and solve the SWE-bench task."""
         task_input = self._load_task()
 
-        # print(f"======= {task_input.docker_image}")
         os.environ["SWE_DOCKER_IMAGE"] = task_input.docker_image
         os.environ["SWE_EVAL_SCRIPT"] = task_input.eval_script
 

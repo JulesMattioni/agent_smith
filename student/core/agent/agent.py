@@ -212,7 +212,6 @@ class Agent:
                             "content": "Observation: " + rejection,
                         }
                         continue
-                print(extracted_code)
                 return SolutionOutput(
                     task_id=task_id,
                     benchmark=benchmark,
