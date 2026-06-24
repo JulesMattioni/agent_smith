@@ -49,9 +49,18 @@ You must implement this function:
 These are SOME tests (not all) your solution must pass:
 {chr(10).join(task_input.test_list)}
 
+To verify your solution, call run_tests with EXACTLY these arguments
+(copy test_list and test_imports verbatim, only fill in `code`):
+
+run_tests(
+    code="<your complete function source>",
+    test_list={task_input.test_list!r},
+    test_imports={task_input.test_imports!r},
+)
+
 Instructions:
 1. Write a correct and general implementation
-2. Run the visible tests to verify they pass
+2. Verify it with the run_tests call above (do not change the tests)
 3. Think about edge cases not covered by the visible tests
 4. Call final_answer() with the COMPLETE function source code as a string
 
