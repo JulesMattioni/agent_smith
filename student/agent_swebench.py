@@ -36,7 +36,6 @@ class SWEBenchAgentCLI(BaseAgentCLI):
 
         client = GroqClient(
             model_name=self.args.model_name,
-            provider_name="groq",
             base_url=self.args.provider_url,
         )
         config = SandboxConfig(max_execution_time_seconds=30)

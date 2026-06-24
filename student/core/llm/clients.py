@@ -12,16 +12,14 @@ from pydantic import ValidationError
 class BaseClient(ABC):
     """Abstract base class for LLM API clients."""
 
-    def __init__(self, model_name: str, provider_name: str, base_url: str):
+    def __init__(self, model_name: str, base_url: str):
         """Initialize the client and load API keys.
 
         Args:
             model_name: The model identifier to use for generation.
-            provider_name: Provider name used to look up API keys.
             base_url: Base URL of the LLM API endpoint.
         """
-        self.__provider_name = provider_name
-        self._key_manager = KeyManager(self.__provider_name)
+        self._key_manager = KeyManager()
         self.model_name = model_name
         self.base_url = base_url
 
@@ -48,17 +46,14 @@ class BaseClient(ABC):
 class GroqClient(BaseClient):
     """LLM client that targets the Groq API."""
 
-    def __init__(
-        self, model_name: str, provider_name: str, base_url: str
-    ) -> None:
+    def __init__(self, model_name: str, base_url: str) -> None:
         """Initialize the Groq client.
 
         Args:
             model_name: The model identifier to use.
-            provider_name: Provider name used to look up API keys.
             base_url: Base URL of the Groq API.
         """
-        super().__init__(model_name, provider_name, base_url)
+        super().__init__(model_name, base_url)
 
     def generate(
         self,
@@ -80,12 +75,10 @@ class GroqClient(BaseClient):
             ValueError: If all API keys are exhausted or an unexpected
                 HTTP status is returned.
         """
-        max_key_attempts = self._key_manager.key_count
         max_rate_limit_retries = 6
         max_server_retries = 4
 
         attempts = 0
-        key_attempts = 0
         rate_limit_retries = 0
         server_retries = 0
 
@@ -164,15 +157,17 @@ class GroqClient(BaseClient):
                 time.sleep(wait)
 
             elif response.status_code in [401, 403]:
-                key_attempts += 1
-                if key_attempts >= max_key_attempts:
-                    raise ValueError("No valid API key.")
+                self._key_manager.mark_current_dead()
+                if self._key_manager.rotate_key() is None:
+                    raise ValueError(
+                        "No valid API key for this provider "
+                        f"({self.base_url})."
+                    )
                 print(
-                    f"Error {response.status_code}, trying next API key...",
+                    f"Error {response.status_code}, key invalid for this "
+                    "provider, trying next API key...",
                     file=sys.stderr,
                 )
-                self._key_manager.rotate_key()
-                time.sleep(1)
 
             elif response.status_code >= 500:
                 server_retries += 1
