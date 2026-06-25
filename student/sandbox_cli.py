@@ -59,7 +59,7 @@ class SandboxCLI:
         return SandboxConfig()
 
     def run(self) -> None:
-        """Start the interactive sandbox REPL."""
+        """Start the interactive sandbox."""
         config = self._load_config()
         client = self._build_client()
         sandbox = Sandbox(config, mcp_client=client)
