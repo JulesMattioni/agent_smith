@@ -1,5 +1,6 @@
 import json
 import dotenv
+import sys
 from student.models.mbpp import MBPPTaskInput
 from student.core.llm.clients import OpenAICompatibleClient
 from student.core.sandbox.sandbox import Sandbox
@@ -154,6 +155,9 @@ final_answer(\"\"\"def {func_name}(...):
 
 
 if __name__ == "__main__":
-    dotenv.load_dotenv()
-    cli = MBPPAgentCLI()
-    cli.run()
+    try:
+        dotenv.load_dotenv()
+        cli = MBPPAgentCLI()
+        cli.run()
+    except Exception as e:
+        print(e, file=sys.stderr)

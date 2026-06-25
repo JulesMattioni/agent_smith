@@ -2,6 +2,7 @@ import dotenv
 import json
 import os
 import re
+import sys
 from student.core.cli.base_agent import BaseAgentCLI
 from student.models.swebench import SWEBenchTaskInput
 from student.core.llm.clients import OpenAICompatibleClient
@@ -144,6 +145,9 @@ class SWEBenchAgentCLI(BaseAgentCLI):
 
 
 if __name__ == "__main__":
-    dotenv.load_dotenv()
-    cli = SWEBenchAgentCLI()
-    cli.run()
+    try:
+        dotenv.load_dotenv()
+        cli = SWEBenchAgentCLI()
+        cli.run()
+    except Exception as e:
+        print(e, file=sys.stderr)

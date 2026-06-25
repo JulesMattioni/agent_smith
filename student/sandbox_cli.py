@@ -1,5 +1,6 @@
 import argparse
 import dotenv
+import sys
 from student.core.sandbox.sandbox import Sandbox
 from student.core.sandbox.config import SandboxConfig
 from student.core.mcp.client import MCPClient
@@ -103,9 +104,12 @@ class SandboxCLI:
 
 def main() -> None:
     """Load environment variables and start the sandbox CLI."""
-    dotenv.load_dotenv()
-    cli = SandboxCLI()
-    cli.run()
+    try:
+        dotenv.load_dotenv()
+        cli = SandboxCLI()
+        cli.run()
+    except Exception as e:
+        print(e, file=sys.stderr)
 
 
 if __name__ == "__main__":
