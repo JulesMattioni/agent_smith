@@ -110,6 +110,7 @@ def main() -> None:
         cli.run()
     except Exception as e:
         print(e, file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

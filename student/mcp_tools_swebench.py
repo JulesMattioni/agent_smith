@@ -1,5 +1,6 @@
 from mcp.server.fastmcp import FastMCP
 import os
+import sys
 import subprocess
 import shlex
 from typing import Any
@@ -20,11 +21,11 @@ class SWEBenchTools:
         self.mcp = FastMCP("swebench-tools")
 
         docker_image = os.getenv("SWE_DOCKER_IMAGE")
-        if not docker_image:
+        if not docker_image or docker_image == "None":
             raise ValueError("SWE_DOCKER_IMAGE missing.")
         self._docker_image: str = docker_image
         eval_script = os.getenv("SWE_EVAL_SCRIPT")
-        if not eval_script:
+        if not eval_script or eval_script == "None":
             raise ValueError("SWE_EVAL_SCRIPT missing.")
         self._eval_script: str = eval_script
         self._container_id: str | None = None
@@ -253,7 +254,8 @@ class SWEBenchTools:
         return self.search_code(f"(def|class) {name}")
 
     def find_references(
-        self, name: str,
+        self,
+        name: str,
     ) -> str:
         """Find all usages of a symbol in the testbed.
 
@@ -318,5 +320,9 @@ class SWEBenchTools:
 
 
 if __name__ == "__main__":
-    server = SWEBenchTools()
-    server.run()
+    try:
+        server = SWEBenchTools()
+        server.run()
+    except Exception as e:
+        print(e, file=sys.stderr)
+        sys.exit(1)

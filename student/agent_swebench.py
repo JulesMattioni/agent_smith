@@ -151,3 +151,4 @@ if __name__ == "__main__":
         cli.run()
     except Exception as e:
         print(e, file=sys.stderr)
+        sys.exit(1)

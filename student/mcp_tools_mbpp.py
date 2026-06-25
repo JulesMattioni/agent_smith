@@ -60,5 +60,9 @@ class MBPPTools:
 
 
 if __name__ == "__main__":
-    server = MBPPTools()
-    server.run()
+    try:
+        server = MBPPTools()
+        server.run()
+    except Exception as e:
+        print(e, file=sys.stderr)
+        sys.exit(1)
