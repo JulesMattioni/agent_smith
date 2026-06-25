@@ -17,7 +17,7 @@ systématique et livrables.
 - [x] **Plafonner l'attente sur rate-limit** (`core/llm/clients.py`) : `RATE_LIMIT_MAX_WAIT`
       (120 s) → au-delà, abandon propre. Rotation de clé d'abord (balayage des clés vivantes
       via `KeyManager.live_count`), back-off plafonné seulement quand toutes sont throttlées.
-- [ ] **Try/Except partout** Ajouter les try/except autour des main pour eviter tout crash.
+- [x] **Try/Except partout** Ajouter les try/except autour des main pour eviter tout crash.
 
 ---
 
