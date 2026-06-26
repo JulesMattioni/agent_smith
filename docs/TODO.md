@@ -11,7 +11,7 @@ systématique et livrables.
 
 - [ ] **Déplacer `mcp_tools_mbpp.py` et `mcp_tools_swebench.py` à la racine du repo** (§V.2/V.5)
       et ajuster les commandes de lancement (`python mcp_tools_*.py`).
-- [ ] **retravailler sandbox cli** mettre le fonctionnement actuel de la sandbox cli sous un flag
+- [x] **retravailler sandbox cli** mettre le fonctionnement actuel de la sandbox cli sous un flag
       `--interactive` et remplacer le fonctionnement de base par un fonctionnement qui fonctionne
       avec cette commande: `<test code here> | uv run sandbox_cli.py --mcp-stdio <mcp command here>`
 - [x] **Dé-câbler le provider en dur** : `provider_name="groq"` est figé dans
@@ -26,7 +26,7 @@ systématique et livrables.
 
 ## 🟢 Priorité 2 — Validation
 
-- [ ] **Sandbox seul** (`exam_sandbox.sh`) : imports bloqués, builtins, réseau, restriction de
+- [x] **Sandbox seul** (`exam_sandbox.sh`) : imports bloqués, builtins, réseau, restriction de
       chemin, timeout, limite mémoire, protocole MCP.
 - [ ] **MBPP** : cycle complet `dump → run → validate`, viser ≥ 4/5.
       (Modèle qui suit le code-based : `llama-4-scout`, `llama-3.3-70b`, `qwen3-32b` —

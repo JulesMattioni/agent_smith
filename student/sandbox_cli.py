@@ -27,6 +27,11 @@ class SandboxCLI:
             "--mcp-stdio", help="Command to launch MCP server via stdio"
         )
         parser.add_argument("--mcp-server", help="URL of HTTP MCP server")
+        parser.add_argument(
+            "--interactive",
+            action="store_true",
+            help="Run an interactive REPL instead of reading code from stdin",
+        )
         return parser.parse_args()
 
     def _build_client(self) -> MCPClient | None:
@@ -59,11 +64,50 @@ class SandboxCLI:
         return SandboxConfig()
 
     def run(self) -> None:
-        """Start the interactive sandbox."""
+        """Run the sandbox, in batch (default) or interactive mode.
+
+        By default, the whole of stdin is read as a single code block,
+        executed once, and the observation is printed — suitable for
+        piping: ``<code> | uv run sandbox --mcp-stdio <cmd>``. The
+        ``--interactive`` flag restores the REPL behaviour instead.
+        """
         config = self._load_config()
         client = self._build_client()
         sandbox = Sandbox(config, mcp_client=client)
 
+        try:
+            if self.args.interactive:
+                self._run_interactive(sandbox, client)
+            else:
+                self._run_batch(sandbox)
+        finally:
+            if client:
+                client.disconnect()
+
+    def _run_batch(self, sandbox: Sandbox) -> None:
+        """Read all of stdin as one code block and execute it once.
+
+        The MCP client, when present, is already wired into ``sandbox``
+        at construction, so the connected server's tools are available to
+        the executed code without being referenced here.
+
+        Args:
+            sandbox: The configured sandbox to run the code in.
+        """
+        code = sys.stdin.read()
+        if not code.strip():
+            return
+        print(sandbox.execute(code))
+
+    def _run_interactive(
+        self, sandbox: Sandbox, client: MCPClient | None
+    ) -> None:
+        """Start the interactive sandbox REPL.
+
+        Args:
+            sandbox: The configured sandbox to run code in.
+            client: Connected MCP client, if any.
+        """
         print("=== SANDBOX INTERACTIVE MODE ===")
 
         print(
@@ -78,8 +122,6 @@ class SandboxCLI:
                 while True:
                     line = input()
                     if line == "QUIT":
-                        if client:
-                            client.disconnect()
                         return
                     if line == "EXEC":
                         break
@@ -97,9 +139,6 @@ class SandboxCLI:
 
             except KeyboardInterrupt:
                 break
-
-        if client:
-            client.disconnect()
 
 
 def main() -> None:
