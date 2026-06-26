@@ -31,7 +31,9 @@ class SWEBenchAgentCLI(BaseAgentCLI):
         os.environ["SWE_DOCKER_IMAGE"] = task_input.docker_image
         os.environ["SWE_EVAL_SCRIPT"] = task_input.eval_script
 
-        mcp_client = MCPClient(command="python mcp_tools_swebench.py")
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        server = os.path.join(repo_root, "mcp_tools_swebench.py")
+        mcp_client = MCPClient(command=f"python {server}")
         mcp_client.connect()
 
         client = OpenAICompatibleClient(

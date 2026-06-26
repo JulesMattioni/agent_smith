@@ -1,5 +1,6 @@
 import json
 import dotenv
+import os
 import sys
 from student.models.mbpp import MBPPTaskInput
 from student.core.llm.clients import OpenAICompatibleClient
@@ -26,7 +27,9 @@ class MBPPAgentCLI(BaseAgentCLI):
         """Set up the agent components and solve the MBPP task."""
         task_input = self._load_task()
 
-        mcp_client = MCPClient(command="python mcp_tools_mbpp.py")
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        server = os.path.join(repo_root, "mcp_tools_mbpp.py")
+        mcp_client = MCPClient(command=f"python {server}")
         mcp_client.connect()
 
         client = OpenAICompatibleClient(
