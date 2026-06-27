@@ -9,7 +9,7 @@ systématique et livrables.
 
 ## 🟠 Priorité 1 — Corrections transverses
 
-- [ ] **Déplacer `mcp_tools_mbpp.py` et `mcp_tools_swebench.py` à la racine du repo** (§V.2/V.5)
+- [x] **Déplacer `mcp_tools_mbpp.py` et `mcp_tools_swebench.py` à la racine du repo** (§V.2/V.5)
       et ajuster les commandes de lancement (`python mcp_tools_*.py`).
 - [x] **retravailler sandbox cli** mettre le fonctionnement actuel de la sandbox cli sous un flag
       `--interactive` et remplacer le fonctionnement de base par un fonctionnement qui fonctionne
@@ -28,10 +28,10 @@ systématique et livrables.
 
 - [x] **Sandbox seul** (`exam_sandbox.sh`) : imports bloqués, builtins, réseau, restriction de
       chemin, timeout, limite mémoire, protocole MCP.
-- [ ] **MBPP** : cycle complet `dump → run → validate`, viser ≥ 4/5.
+- [x] **MBPP** : cycle complet `dump → run → validate`, viser ≥ 4/5.
       (Modèle qui suit le code-based : `llama-4-scout`, `llama-3.3-70b`, `qwen3-32b` —
       **pas** `gpt-oss-*`, voir note plus bas.)
-- [ ] **SWE-bench** : viser ≥ 2/3 sur les tâches faciles. ✅ déjà résolues de bout en bout
+- [x] **SWE-bench** : viser ≥ 2/3 sur les tâches faciles. ✅ déjà résolues de bout en bout
       avec `llama-4-scout` : `sympy-13480`, `sympy-18189`, `django-11066`.
       ⚠️ **Bloqueur local** : la moulinette plante sur Docker rootless (lchown UID élevé) —
       workaround appliqué dans le `.venv`, voir `docs/bug-moulinette-docker-rootless.md`.
