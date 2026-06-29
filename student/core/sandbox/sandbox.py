@@ -175,6 +175,24 @@ class Sandbox:
             list(self.mcp_client.get_tools().keys()) if self.mcp_client else []
         )
 
+    def get_man(self) -> str:
+        """Return the tool manual for the LLM prompt.
+
+        The sandbox is the layer that exposes MCP tools as callable
+        functions in the execution namespace, so it owns the manual too:
+        it delegates to the connected MCP client for the dynamically-
+        discovered tool docs. Routing through the sandbox (rather than
+        letting the prompt reach into the MCP client directly) keeps the
+        architectural boundary intact — the sandbox wraps the MCP client.
+
+        Returns:
+            The dynamically-generated tool manual, or an explicit notice
+            if no MCP client is connected.
+        """
+        if not self.mcp_client:
+            return "No MCP client connected."
+        return self.mcp_client.get_man()
+
     def execute(self, code: str) -> str:
         """Execute code in a subprocess and return its output.
 

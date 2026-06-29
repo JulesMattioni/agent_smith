@@ -89,7 +89,7 @@ final_answer(\"\"\"def {func_name}(...):
             "You can use `print()` to observe variables and results.\n"
             "Once you have the final answer, call the function"
             ' `final_answer("your result")`.\n'
-            f"\n{mcp_client.get_man()}\n"
+            f"\n{sandbox.get_man()}\n"
             "\nEach tool is a plain Python function. Call it directly by"
             " its name with keyword arguments. Do NOT prefix it with a"
             " module or object (write `run_tests(...)`, never"

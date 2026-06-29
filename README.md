@@ -178,13 +178,9 @@ agent_smith/
 │       ├── llm/             # OpenAI-compatible client, key rotation
 │       ├── mcp/             # sync wrapper over the async MCP session
 │       └── cli/             # shared CLI base
-├── docs/                    # detailed codebase guide, notes
 ├── benchmark_outputs/       # solution.json files backing the report
 └── BENCHMARK_REPORT.md
 ```
-
-A deep, file-by-file walkthrough is in
-[`docs/CODEBASE_GUIDE.md`](docs/CODEBASE_GUIDE.md).
 
 ## Agent loop explanation
 
@@ -336,8 +332,8 @@ reviewed and owned by us:
   strategy.
 - **Prompt engineering** iterations for the agent system prompts (MBPP and
   SWE-bench), validated empirically by inspecting `solution.json` traces.
-- **Documentation** (`docs/CODEBASE_GUIDE.md`, this README, the benchmark
-  report) drafted from the actual code and the real run data.
+- **Documentation** (this README, the benchmark report) drafted from the actual
+  code and the real run data.
 
 The agent loop, the sandbox security mechanisms, the MCP integration, and all
 architectural choices are our own work — AI accelerated the writing, not the

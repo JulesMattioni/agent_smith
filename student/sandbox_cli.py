@@ -77,7 +77,7 @@ class SandboxCLI:
 
         try:
             if self.args.interactive:
-                self._run_interactive(sandbox, client)
+                self._run_interactive(sandbox)
             else:
                 self._run_batch(sandbox)
         finally:
@@ -99,14 +99,11 @@ class SandboxCLI:
             return
         print(sandbox.execute(code))
 
-    def _run_interactive(
-        self, sandbox: Sandbox, client: MCPClient | None
-    ) -> None:
+    def _run_interactive(self, sandbox: Sandbox) -> None:
         """Start the interactive sandbox REPL.
 
         Args:
             sandbox: The configured sandbox to run code in.
-            client: Connected MCP client, if any.
         """
         print("=== SANDBOX INTERACTIVE MODE ===")
 
@@ -126,11 +123,7 @@ class SandboxCLI:
                     if line == "EXEC":
                         break
                     if line == "MAN":
-                        print(
-                            client.get_man()
-                            if client
-                            else "No MCP client connected."
-                        )
+                        print(sandbox.get_man())
                         continue
                     lines.append(line)
 

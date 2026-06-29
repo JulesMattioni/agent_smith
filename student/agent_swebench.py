@@ -82,7 +82,7 @@ class SWEBenchAgentCLI(BaseAgentCLI):
             "You can use persistent variables, loops, and conditional"
             " logic.\n"
             "You can use `print()` to observe variables and results.\n"
-            f"\n{mcp_client.get_man()}\n"
+            f"\n{sandbox.get_man()}\n"
             "\nEach tool is a plain Python function. Call it directly by"
             " its name with keyword arguments. Do NOT prefix it with a"
             " module or object (write `search_code(...)`, never"
