@@ -319,17 +319,12 @@ Topic references:
   Python SDK.
 - Provider docs: [Groq](https://groq.com), [OpenRouter](https://openrouter.ai),
   [Google AI Studio](https://ai.google.dev).
-- The HuggingFace *smolagents* writings on code-based agents (read for the
-  **concepts** — the orchestration here is our own implementation, as required).
 
 ### Use of AI
 
 AI assistance (Claude) was used as a coding partner, with every decision
 reviewed and owned by us:
 
-- **Drafting and refactoring** boilerplate (CLI parsing, Pydantic models, the
-  HTTP retry/back-off ladder) — then adjusted by hand for our error-handling
-  strategy.
 - **Prompt engineering** iterations for the agent system prompts (MBPP and
   SWE-bench), validated empirically by inspecting `solution.json` traces.
 - **Documentation** (this README, the benchmark report) drafted from the actual
