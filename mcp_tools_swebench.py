@@ -256,16 +256,43 @@ class SWEBenchTools:
     def find_references(
         self,
         name: str,
+        filepath: str | None = None,
+        line: int | None = None,
     ) -> str:
-        """Find all usages of a symbol in the testbed.
+        """Find all usages of a symbol (function or class) in the testbed.
+
+        The symbol is matched as a whole word (``\\bname\\b``) so that
+        ``foo`` does not also match ``foobar``. The optional ``filepath``
+        and ``line`` arguments narrow the search to disambiguate a symbol:
+        ``filepath`` restricts results to a single file, and ``line``
+        filters them to that exact line (useful to pinpoint one definition
+        among several identically-named symbols).
 
         Args:
             name: Symbol name to search for.
+            filepath: Optional file to restrict the search to.
+            line: Optional line number to keep only matches on that line.
 
         Returns:
-            Matching lines containing the symbol name.
+            Matching lines in search_code format ('/path:line content'),
+            or a message if nothing matched.
         """
-        return self.search_code(name)
+        results = self.search_code(rf"\b{name}\b")
+        if filepath is None and line is None:
+            return results
+        if results.startswith(("No matches", "Error:")):
+            return results
+        target = os.path.basename(filepath) if filepath else None
+        kept = []
+        for ln in results.splitlines():
+            loc = ln.split(" ", 1)[0]  # '/path:line'
+            path, _, lineno = loc.rpartition(":")
+            if target is not None and os.path.basename(path) != target:
+                continue
+            if line is not None and lineno != str(line):
+                continue
+            kept.append(ln)
+        return "\n".join(kept) if kept else f"No references to '{name}' found."
 
     # Execution Tools
 
