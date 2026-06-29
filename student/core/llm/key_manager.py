@@ -4,6 +4,8 @@ import os
 class KeyManager:
     """Manage a single pool of API keys, skipping ones proven dead.
 
+    Keys are loaded from both our ``API_KEYS`` variable and any standard
+    ``*_API_KEY`` variables (see ``__init__``), then merged into one pool.
     Keys are provider-agnostic: the same pool is tried against whatever
     provider URL the client targets. A key that the provider rejects as
     invalid (HTTP 401/403) is marked dead and never retried for the rest
@@ -11,16 +13,42 @@ class KeyManager:
     """
 
     def __init__(self) -> None:
-        """Load API keys from the ``API_KEYS`` environment variable.
+        """Load API keys from the environment.
+
+        Two formats are accepted, and both are merged into one pool so the
+        agent works whatever the evaluation ``.env`` provides:
+
+        - ``API_KEYS``: our own format, a comma-separated list of keys.
+        - Standard ``*_API_KEY`` variables (e.g. ``OPENROUTER_API_KEY``,
+          ``GROQ_API_KEY``, ``GEMINI_API_KEY``): each may itself hold a
+          comma-separated list. The subject's evaluation injects keys via
+          such standard variables, so reading them is required.
+
+        Keys are deduplicated while preserving discovery order. The pool
+        stays provider-agnostic: a key the targeted provider rejects
+        (401/403) is marked dead and skipped for the rest of the run.
 
         Raises:
             ValueError: If no keys are found in the environment.
         """
-        keys_str = os.getenv("API_KEYS", "")
-        self.__keys = [k.strip() for k in keys_str.split(",") if k.strip()]
+        raw: list[str] = []
+        raw.extend(os.getenv("API_KEYS", "").split(","))
+        for name, value in os.environ.items():
+            if name.endswith("_API_KEY") and value:
+                raw.extend(value.split(","))
+
+        seen: set[str] = set()
+        self.__keys: list[str] = []
+        for key in (k.strip() for k in raw):
+            if key and key not in seen:
+                seen.add(key)
+                self.__keys.append(key)
 
         if not self.__keys:
-            raise ValueError("No keys found in API_KEYS")
+            raise ValueError(
+                "No API keys found. Set API_KEYS (comma-separated) or a "
+                "standard *_API_KEY variable (e.g. OPENROUTER_API_KEY)."
+            )
 
         self.__dead: set[str] = set()
         self.__index = 0

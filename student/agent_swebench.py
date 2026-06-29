@@ -1,4 +1,3 @@
-import dotenv
 import json
 import os
 import re
@@ -148,7 +147,6 @@ class SWEBenchAgentCLI(BaseAgentCLI):
 
 if __name__ == "__main__":
     try:
-        dotenv.load_dotenv()
         cli = SWEBenchAgentCLI()
         cli.run()
     except Exception as e:

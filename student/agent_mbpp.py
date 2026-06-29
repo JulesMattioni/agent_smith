@@ -1,5 +1,4 @@
 import json
-import dotenv
 import os
 import sys
 from student.models.mbpp import MBPPTaskInput
@@ -159,7 +158,6 @@ final_answer(\"\"\"def {func_name}(...):
 
 if __name__ == "__main__":
     try:
-        dotenv.load_dotenv()
         cli = MBPPAgentCLI()
         cli.run()
     except Exception as e:
