@@ -30,7 +30,9 @@ class BaseAgentCLI(ABC):
         Args:
             output: Pydantic model to serialize as JSON.
         """
-        os.makedirs(os.path.dirname(self.args.output), exist_ok=True)
+        out_dir = os.path.dirname(self.args.output)
+        if out_dir:
+            os.makedirs(out_dir, exist_ok=True)
         with open(self.args.output, "w") as f:
             f.write(output.model_dump_json(indent=2))
 
