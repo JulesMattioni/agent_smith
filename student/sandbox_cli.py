@@ -37,18 +37,35 @@ class SandboxCLI:
     def _build_client(self) -> MCPClient | None:
         """Build and connect an MCP client from CLI args.
 
+        If an MCP flag is given but the server fails to start or connect
+        (e.g. the SWE-bench server aborts because no Docker image is set),
+        the failure is reported on stderr and ``None`` is returned so the
+        sandbox still runs — without the MCP tools, but with
+        ``final_answer()`` and the security restrictions intact. The
+        sandbox is meant to work independently of any MCP server.
+
         Returns:
-            A connected MCPClient, or None if no MCP flag was given.
+            A connected MCPClient, or None if no MCP flag was given or the
+            connection failed.
         """
         if self.args.mcp_stdio:
             client = MCPClient(command=self.args.mcp_stdio)
-            client.connect()
-            return client
         elif self.args.mcp_server:
             client = MCPClient(url=self.args.mcp_server)
+        else:
+            return None
+
+        try:
             client.connect()
-            return client
-        return None
+        except Exception as e:
+            print(
+                f"Warning: could not connect to the MCP server ({e}). "
+                "Running the sandbox without MCP tools.",
+                file=sys.stderr,
+            )
+            client.disconnect()
+            return None
+        return client
 
     def _load_config(self) -> SandboxConfig:
         """Load sandbox config from a JSON file or use defaults.
