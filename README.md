@@ -46,7 +46,7 @@ benchmarked to pick the best one.
 uv sync
 
 # Provide your API keys (never commit this file — it is git-ignored)
-cp student/.env.exemple student/.env
+cp student/.env.example student/.env
 # then edit student/.env:
 #   API_KEYS=key1,key2,key3
 ```
