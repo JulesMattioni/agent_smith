@@ -145,10 +145,15 @@ class SWEBenchAgentCLI(BaseAgentCLI):
         self._save_output(res)
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Entrypoint: build the SWE-bench agent CLI and run it."""
     try:
         cli = SWEBenchAgentCLI()
         cli.run()
     except Exception as e:
         print(e, file=sys.stderr)
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

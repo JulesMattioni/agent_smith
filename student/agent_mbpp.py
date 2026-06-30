@@ -156,10 +156,15 @@ final_answer(\"\"\"def {func_name}(...):
         self._save_output(res)
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Entrypoint: build the MBPP agent CLI and run it."""
     try:
         cli = MBPPAgentCLI()
         cli.run()
     except Exception as e:
         print(e, file=sys.stderr)
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
