@@ -1,4 +1,4 @@
-*This project has been created as part of the 42 curriculum by jmattion, thsykas.*
+*This project has been created as part of the 42 curriculum by jmattion.*
 
 # Agent Smith
 
